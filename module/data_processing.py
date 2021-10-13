@@ -11,23 +11,27 @@ from torch_geometric.data import Data
 from torch_geometric.datasets import TUDataset
 import sknetwork as skn
 
-def generate_data(config_name):
-    
-    #Load config
-    with open("configurations/config_data.json") as json_data_file:
-        config = json.load(json_data_file)[config_name]
+def generate_data(config):
+    """Download and Process selected dataset
 
-    if config_name == "synthetic":
+    Args:
+        config (Dict): Configuration of the run
+
+    Returns:
+        None
+    """
+    if config["dataset"] == "synthetic":
         return generate_synthetic(config)
 
-    if config_name == "mutag":
+    if config["dataset"] == "mutag":
         return generate_mutag(config)
 
-    if config_name == "reddit":
+    if config["dataset"] == "reddit":
         return generate_reddit(config)
-
-    return 0
-
+    
+    print("Dataset not found")
+    return -1
+    
 def generate_synthetic(config):
     #Check if data already exists
     if os.path.isfile(config["save_path"] + "dataset_test"):
@@ -143,7 +147,6 @@ def generate_synthetic(config):
     torch.save(l_data_train, config["save_path"] + "dataset_train")
     torch.save(l_data_test, config["save_path"] + "dataset_test")
 
-    return 1
 
 def generate_mutag(config):
     #Check if data already exists
@@ -183,8 +186,6 @@ def generate_mutag(config):
     # Save data
     torch.save(l_data_train, config["save_path"] + "dataset_train")
     torch.save(l_data_test, config["save_path"] + "dataset_test")
-
-    return 1
 
 def generate_reddit(config):
     #Check if data already exists
@@ -226,13 +227,3 @@ def generate_reddit(config):
     # Save data
     torch.save(l_data_train, config["save_path"] + "dataset_train")
     torch.save(l_data_test, config["save_path"] + "dataset_test")
-
-    return 1
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('config_name', help='Enter Config Name here')
-
-    args = parser.parse_args()
-
-    main(args.config_name)
