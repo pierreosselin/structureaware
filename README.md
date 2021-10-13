@@ -1,2 +1,2 @@
-# communityaware
-Community Aware randomized smoothing for graph classification.
+# CommunityAwareRS
+Community Aware Randomized smoothing for graph classification
