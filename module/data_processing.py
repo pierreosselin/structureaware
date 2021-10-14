@@ -32,11 +32,15 @@ def generate_data(config):
     print("Dataset not found")
     return -1
     
-def generate_synthetic(config):
-    #Check if data already exists
-    if os.path.isfile(config["save_path"] + "dataset_test"):
-        print("Dataset already exists, delete it beforehand")
-        print("Proceeeding...")
+def generate_SBMS(config):
+    """Function generating SBMS graphs
+
+    Args:
+        config (dict): configuration dictionary
+
+    Returns:
+        [torch_geometric.data.Data]: list of graphs
+    """
 
     ## Generate SBMS
     n_data = config["n_data_per_class"]
@@ -44,18 +48,6 @@ def generate_synthetic(config):
     p = config["block_probs"]
     n_graph = sum(list_blocks)
 
-    ## If not specify compute coef such that the expected number of edges is the same
-    if config["er_param"]:
-        er_p = config["er_param"]
-    else:
-        exp_edges_sbm = 0
-        n_list_blocks = len(list_blocks)
-        for i in range(n_list_blocks):
-            for j in range(i):
-                exp_edges_sbm += p[i][j] * list_blocks[i] * list_blocks[j]
-            exp_edges_sbm += p[i][i] * list_blocks[i] * (list_blocks[i] - 1) / 2
-        er_p = 2 * exp_edges_sbm / (n_graph*(n_graph - 1))
-    
     l_data = []
     
     print("Generate SBMs graphs...")
@@ -90,6 +82,7 @@ def generate_synthetic(config):
         data.node_community = torch.tensor(sum([[i for k in range(el)] for i, el in enumerate(list_blocks)], []))
 
         cumsum_list_blocks = [0] + list(np.cumsum(list_blocks))
+
         data.community_node = [list(range(cumsum_list_blocks[i], cumsum_list_blocks[i+1])) for i in range(len(list_blocks))]
 
         data.community_size = torch.tensor(list_blocks)
@@ -97,6 +90,40 @@ def generate_synthetic(config):
         data.community_prob = torch.tensor(p)
 
         l_data.append(data)
+
+    return l_data
+
+
+def generate_ER(config):
+    """Function generating ER graphs
+
+    Args:
+        config (dict): configuration dictionary
+
+    Returns:
+        [torch_geometric.data.Data]: list of graphs
+    """
+
+
+    ## Generate ER
+    n_data = config["n_data_per_class"]
+    list_blocks = config["list_blocks"]
+    p = config["block_probs"]
+    n_graph = sum(list_blocks)
+
+    ## If not specify compute coef such that the expected number of edges is the same
+    if config["er_param"]:
+        er_p = config["er_param"]
+    else:
+        exp_edges_sbm = 0
+        n_list_blocks = len(list_blocks)
+        for i in range(n_list_blocks):
+            for j in range(i):
+                exp_edges_sbm += p[i][j] * list_blocks[i] * list_blocks[j]
+            exp_edges_sbm += p[i][i] * list_blocks[i] * (list_blocks[i] - 1) / 2
+        er_p = 2 * exp_edges_sbm / (n_graph*(n_graph - 1))
+
+    l_data = []
 
     print("Generate ER graphs...")
     ## Add condition for clustering or not, by default single cluster here
@@ -137,11 +164,32 @@ def generate_synthetic(config):
         data.community_prob = torch.tensor([[er_p]])
 
         l_data.append(data)
+    return l_data
+
+def generate_synthetic(config):
+    #Check if data already exists
+    if os.path.isfile(config["save_path"] + "dataset_test"):
+        print("Dataset already exists, delete it beforehand")
+        print("Proceeeding...")
+    
+    l_data_sbm = generate_SBMS(config)
+
+    l_data_er = generate_ER(config)
+
+
+
+    l_data = l_data_sbm + l_data_er
 
     # Split train/test
-    n_train = int(2*n_data*config["prop_train_test"])
-    random.shuffle(l_data)
-    l_data_train, l_data_test = l_data[:n_train], l_data[n_train:]
+    n_train = int(config["n_data_per_class"]*config["prop_train_test"])
+    l_data_sbm_train, l_data_sbm_test = l_data_sbm[:n_train], l_data_sbm[n_train:]
+    l_data_er_train, l_data_er_test = l_data_er[:n_train], l_data_er[n_train:]
+
+    l_data_train = l_data_sbm_train + l_data_er_train
+    l_data_test = l_data_sbm_test + l_data_er_test
+    
+    random.shuffle(l_data_train)
+    random.shuffle(l_data_test)
 
     # Save data
     torch.save(l_data_train, config["save_path"] + "dataset_train")
