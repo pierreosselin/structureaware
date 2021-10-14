@@ -170,15 +170,11 @@ def generate_synthetic(config):
     #Check if data already exists
     if os.path.isfile(config["save_path"] + "dataset_test"):
         print("Dataset already exists, delete it beforehand")
-        print("Proceeeding...")
-    
+        return 0
+       
     l_data_sbm = generate_SBMS(config)
 
     l_data_er = generate_ER(config)
-
-
-
-    l_data = l_data_sbm + l_data_er
 
     # Split train/test
     n_train = int(config["n_data_per_class"]*config["prop_train_test"])

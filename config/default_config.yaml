@@ -1,10 +1,9 @@
 ## Configuration File
 dataset: mutag
 save_path: data/mutag/dataset/
-params_sbm:
-  n_data_per_class: 300
-  list_blocks: [20,20,20]
-  block_probs: [[0.2, 0.02, 0.02], [0.02, 0.3, 0.02], [0.02, 0.02, 0.4]]
+n_data_per_class: 300
+list_blocks: [20,20,20]
+block_probs: [[0.2, 0.02, 0.02], [0.02, 0.3, 0.02], [0.02, 0.02, 0.4]]
 er_param: null
 clustering_parameter: 0.7
 apply_clustering: false
