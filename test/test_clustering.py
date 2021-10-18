@@ -4,15 +4,6 @@ import torch
 import pytest
 from torch_geometric.data import Data
 
-"""
-Should test for:
-- Number of clusters when obvious
-- Consistency output (In shapes)
-- Good index correspondance (we use igraph)
-- Good approximation of probabilities
-- Test with both duplicate edges
-"""
-
 def test_compute_probabilities():
 
         edge_idx = torch.Tensor([[0,1,2,3,4], [1, 2, 3, 4, 5]])
@@ -27,3 +18,17 @@ def test_compute_probabilities():
         community_prob = compute_probabilities(n_communities, data, node_community, community_size)
         assert (community_prob == np.array([[2/3, 1/9], [1/9, 2/3]])).all()
 
+def test_approximate_probabilities():
+        assert True
+
+def test_number_clusters():
+        assert True
+
+def test_node_indexing():
+        assert True
+
+def test_input_inconsistency():
+        assert True
+
+def test_output_consistency():
+        assert True
