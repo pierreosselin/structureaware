@@ -10,6 +10,8 @@ from tqdm import tqdm
 from torch_geometric.data import Data
 from torch_geometric.datasets import TUDataset
 import sknetwork as skn
+from utils import compute_p_from_sbm
+from clustering import process_clustering
 
 def generate_data(config):
     """Download and Process selected dataset
@@ -76,19 +78,13 @@ def generate_SBMS(config):
         edge_idx = torch.cat((edge_idx, edge_idx[[1, 0]]), 1)
 
         y = torch.zeros(1).long()
-
+        
         data = Data(x=x, edge_index=edge_idx, y = y)
-
         data.node_community = torch.tensor(sum([[i for k in range(el)] for i, el in enumerate(list_blocks)], []))
-
         cumsum_list_blocks = [0] + list(np.cumsum(list_blocks))
-
         data.community_node = [list(range(cumsum_list_blocks[i], cumsum_list_blocks[i+1])) for i in range(len(list_blocks))]
-
         data.community_size = torch.tensor(list_blocks)
-
         data.community_prob = torch.tensor(p)
-
         l_data.append(data)
 
     return l_data
@@ -115,13 +111,7 @@ def generate_ER(config):
     if config["er_param"]:
         er_p = config["er_param"]
     else:
-        exp_edges_sbm = 0
-        n_list_blocks = len(list_blocks)
-        for i in range(n_list_blocks):
-            for j in range(i):
-                exp_edges_sbm += p[i][j] * list_blocks[i] * list_blocks[j]
-            exp_edges_sbm += p[i][i] * list_blocks[i] * (list_blocks[i] - 1) / 2
-        er_p = 2 * exp_edges_sbm / (n_graph*(n_graph - 1))
+        er_p = compute_p_from_sbm(p, list_blocks)
 
     l_data = []
 
@@ -154,15 +144,10 @@ def generate_ER(config):
         y = torch.ones(1).long()
 
         data = Data(x=x, edge_index=edge_idx, y = y)
-
         data.node_community = torch.tensor([0 for i in range(n_graph)])
-
         data.community_node = [list(range(n_graph))]
-
         data.community_size = torch.tensor([n_graph])
-
         data.community_prob = torch.tensor([[er_p]])
-
         l_data.append(data)
     return l_data
 
@@ -173,14 +158,12 @@ def generate_synthetic(config):
         return 0
        
     l_data_sbm = generate_SBMS(config)
-
     l_data_er = generate_ER(config)
 
     # Split train/test
     n_train = int(config["n_data_per_class"]*config["prop_train_test"])
     l_data_sbm_train, l_data_sbm_test = l_data_sbm[:n_train], l_data_sbm[n_train:]
     l_data_er_train, l_data_er_test = l_data_er[:n_train], l_data_er[n_train:]
-
     l_data_train = l_data_sbm_train + l_data_er_train
     l_data_test = l_data_sbm_test + l_data_er_test
     
@@ -210,17 +193,11 @@ def generate_mutag(config):
 
             ###Compute Features
             data = Data(x=datum.x, edge_index=datum.edge_index, y = datum.y)
-
             community_prob, node_community, community_node, community_size = process_clustering(datum, param_cluster, 1)
-
             data.node_community = torch.tensor(node_community)
-
             data.community_node = community_node
-
             data.community_size = torch.tensor(community_size)
-
             data.community_prob = torch.tensor(community_prob)
-
             l_data.append(data)
 
     # Split train/test
