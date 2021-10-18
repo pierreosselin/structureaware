@@ -57,7 +57,7 @@ def approximate_probabilities(community_prob, n_communities, digits):
 
     for i in range(n_communities):
         for j in range(i+1):
-            if community_prob[i, j] < 10**(-digits):
+            if community_prob[i, j] < 10**(-digits) and community_prob[i, j] > 0:
                 community_prob[i, j] = 10**(-digits)
             else:
                 community_prob[i, j] = round(community_prob[i, j], digits)
