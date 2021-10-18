@@ -78,7 +78,7 @@ def generate_SBMS(config):
         edge_idx = torch.cat((edge_idx, edge_idx[[1, 0]]), 1)
 
         y = torch.zeros(1).long()
-        
+
         data = Data(x=x, edge_index=edge_idx, y = y)
         data.node_community = torch.tensor(sum([[i for k in range(el)] for i, el in enumerate(list_blocks)], []))
         cumsum_list_blocks = [0] + list(np.cumsum(list_blocks))
@@ -112,7 +112,6 @@ def generate_ER(config):
         er_p = config["er_param"]
     else:
         er_p = compute_p_from_sbm(p, list_blocks)
-
     l_data = []
 
     print("Generate ER graphs...")
@@ -222,22 +221,15 @@ def generate_reddit(config):
         l_data = []
         param_cluster = config["clustering_parameter"]
         for datum in tqdm(dataset):
-
             n_nodes = datum.edge_index.max() + 1
             x = torch.ones((n_nodes, 1))
             ###Compute Features
             data = Data(x=x, edge_index=datum.edge_index, y = datum.y)
-
             community_prob, node_community, community_node, community_size = process_clustering(data, param_cluster, 1)
-
             data.node_community = torch.tensor(node_community)
-
             data.community_node = community_node
-
             data.community_size = torch.tensor(community_size)
-
             data.community_prob = torch.tensor(community_prob)
-
             l_data.append(data)
 
 
