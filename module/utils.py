@@ -1,4 +1,4 @@
-## Utilitary functions for various tasks
+## Utility functions for various tasks
 
 def compute_p_from_sbm(p_block, list_blocks):
     """Find the equivalent parameter p from the Erdos-Renyi model that matches the average number of edges from the given SBM graph
@@ -14,6 +14,12 @@ def compute_p_from_sbm(p_block, list_blocks):
     n_graph = sum(list_blocks)
     exp_edges_sbm = 0
     n_list_blocks = len(list_blocks)
+    
+    if n_list_blocks != p_block.shape[0]:
+        raise Exception("The list of blocks does not match the clusters probabilities")
+    if p_block.shape[0] != p_block.shape[1]:
+        raise Exception("The probability matrix is not square")
+    
     for i in range(n_list_blocks):
         for j in range(i):
             exp_edges_sbm += p_block[i][j] * list_blocks[i] * list_blocks[j]
