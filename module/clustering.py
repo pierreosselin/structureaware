@@ -19,28 +19,42 @@ def apply_clustering(g, param):
     return g.community_leiden(objective_function="modularity", resolution_parameter=param, n_iterations=-1)
 
 def compute_probabilities(n_communities, gr, node_community, community_size):
+    """Given a graph clustering, compute the SBM probability matrix
 
+    Args:
+        n_communities (int): Number of communities
+        gr (torch_geometric.data.Data): graph being clustered
+        node_community (1D array): Membership vector
+        community_size (1D array): Vector representing the size of each clusters
+
+    Returns:
+        2D array: SBM probability matrix
+    """
     community_prob = np.zeros((n_communities, n_communities))
     list_edges = gr.edge_index.T
     for edge in list_edges:
         c1, c2 = node_community[edge[0]], node_community[edge[1]]
-        if c1 != c2:
-            community_prob[c1, c2] += 1
-            community_prob[c2, c1] += 1
-        else:
-            community_prob[c1, c2] += 1
-
-    community_prob *= 2
+        community_prob[c1, c2] += 1
 
     for i in range(n_communities):
         for j in range(i):
             community_prob[i, j] /= (community_size[i] * community_size[j])
             community_prob[j, i] = community_prob[i, j]
         community_prob[i, i] /= community_size[i]*(community_size[i] - 1)
-
     return community_prob
 
 def approximate_probabilities(community_prob, n_communities, digits):
+    """Regroup group of edges of similar probabilities
+
+    Args:
+        community_prob (2D array): SBM probability matrix
+        n_communities (int): number of communities
+        digits (float): Degree of approximation
+
+    Returns:
+        2D array: SBM approximated probability matrix
+    """
+
     for i in range(n_communities):
         for j in range(i+1):
             if community_prob[i, j] < 10**(-digits):
@@ -67,8 +81,7 @@ def process_clustering(gr, param, digits):
     """
 
     # Detect if undirected or not
-    edge = gr.edge_index.T[0]
-    undirected = is_undirected(torch.tensor([edge[1], edge[0]]) in gr.edge_index.T)
+    undirected = is_undirected(gr.edge_index)
     if not undirected:
         raise Exception("The graph has to be undirected")
 
