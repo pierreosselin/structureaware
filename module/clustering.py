@@ -54,13 +54,12 @@ def approximate_probabilities(community_prob, n_communities, digits):
     Returns:
         2D array: SBM approximated probability matrix
     """
+    if not np.all(community_prob == community_prob.T):
+        raise Exception("The probabilities has to be symmetrical")
 
     for i in range(n_communities):
         for j in range(i+1):
-            if community_prob[i, j] < 10**(-digits) and community_prob[i, j] > 0:
-                community_prob[i, j] = 10**(-digits)
-            else:
-                community_prob[i, j] = round(community_prob[i, j], digits)
+            community_prob[i, j] = round(community_prob[i, j], digits)
             community_prob[j, i] = community_prob[i, j]
     return community_prob
 
