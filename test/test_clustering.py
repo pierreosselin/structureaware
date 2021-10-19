@@ -1,8 +1,11 @@
-from module.clustering import compute_probabilities, approximate_probabilities
+from module.clustering import compute_probabilities, approximate_probabilities, apply_clustering
 import numpy as np
 import torch
 import pytest
 from torch_geometric.data import Data
+import igraph
+import networkx as nx
+
 
 def test_compute_probabilities():
         edge_idx = torch.Tensor([[0,1,2,3,4], [1, 2, 3, 4, 5]])
@@ -42,10 +45,41 @@ def test_approximate_probabilities():
                 result = approximate_probabilities(community_prob, n_communities, digits)
 
 def test_number_clusters():
-        assert True
+        n = 30
+        list_blocks = [10,10,10]
+        p = [[0.9, 0.1, 0.1], [0.1, 0.9, 0.1], [0.1, 0.1, 0.9]]
+        G = nx.generators.community.stochastic_block_model(list_blocks, p)
+        edge_idx = torch.from_numpy(np.array(G.edges).T)
+        edge_idx = torch.cat((edge_idx, edge_idx[[1, 0]]), 1)
+        
+        g = igraph.Graph()
+        g.add_vertices(n)
+        g.add_edges(np.array(edge_idx.T))
+        result = apply_clustering(g, 0.7)
+        node_community = result.membership
+        print(node_community)
+        communities, community_size = np.unique(node_community, return_counts=True)
+        n_communities = communities.shape[0]
+
+        assert n_communities == 3
 
 def test_node_indexing():
-        assert True
+        n = 30
+        list_blocks = [10,10,10]
+        p = [[0.9, 0.1, 0.1], [0.1, 0.9, 0.1], [0.1, 0.1, 0.9]]
+        G = nx.generators.community.stochastic_block_model(list_blocks, p)
+        edge_idx = torch.from_numpy(np.array(G.edges).T)
+        edge_idx = torch.cat((edge_idx, edge_idx[[1, 0]]), 1)
+        g = igraph.Graph()
+        g.add_vertices(n)
+        g.add_edges(np.array(edge_idx.T))
+        result = apply_clustering(g, 0.7)
+        node_community = np.array(result.membership)
+        communities, community_size = np.unique(node_community, return_counts=True)
+        n_communities = communities.shape[0]
+        assert set(np.where(node_community == 0)[0]) == set(range(10))
+        assert set(np.where(node_community == 1)[0]) == set(range(10, 20))
+        assert set(np.where(node_community == 2)[0]) == set(range(20, 30))
 
 def test_input_inconsistency():
         assert True

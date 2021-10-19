@@ -55,7 +55,7 @@ def approximate_probabilities(community_prob, n_communities, digits):
         2D array: SBM approximated probability matrix
     """
     if not np.all(community_prob == community_prob.T):
-        raise Exception("The probabilities has to be symmetrical")
+        raise Exception("The probability matrix has to be symmetrical")
 
     for i in range(n_communities):
         for j in range(i+1):

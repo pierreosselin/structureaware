@@ -189,7 +189,6 @@ def generate_mutag(config):
         l_data = []
         param_cluster = config["clustering_parameter"]
         for datum in tqdm(dataset):
-
             ###Compute Features
             data = Data(x=datum.x, edge_index=datum.edge_index, y = datum.y)
             community_prob, node_community, community_node, community_size = process_clustering(datum, param_cluster, 1)
@@ -215,7 +214,6 @@ def generate_reddit(config):
     dataset = TUDataset(root=config["save_path"], name='REDDIT-BINARY')
     dataset = dataset.shuffle()
     n_data = len(dataset)
-
     if config["apply_clustering"]:
         print("Applying Clustering to the dataset")
         l_data = []
