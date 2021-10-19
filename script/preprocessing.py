@@ -8,6 +8,8 @@ def preprocessing(config):
     Args:
         config ([Dict]): Configuration parameters for the experiments
     """
+
+    generate_data(config)
     return 0
 
 if __name__ == '__main__':

@@ -99,8 +99,7 @@ def generate_ER(config):
     Returns:
         [torch_geometric.data.Data]: list of graphs
     """
-
-
+    
     ## Generate ER
     n_data = config["n_data_per_class"]
     list_blocks = config["list_blocks"]

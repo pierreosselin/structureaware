@@ -8,3 +8,5 @@ er_param: null
 clustering_parameter: 0.7
 apply_clustering: false
 prop_train_test: 0.7
+optimisation:
+  lr: 0.01
