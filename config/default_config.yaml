@@ -1,6 +1,7 @@
 ## Configuration File
 dataset: mutag
 save_path: data/mutag/dataset/
+weight_path: data/mutag/pretrained_models/GCN.pth
 n_data_per_class: 300
 list_blocks: [20,20,20]
 block_probs: [[0.2, 0.02, 0.02], [0.02, 0.3, 0.02], [0.02, 0.02, 0.4]]
@@ -9,4 +10,8 @@ clustering_parameter: 0.7
 apply_clustering: false
 prop_train_test: 0.7
 optimisation:
+  model: GCN_Classification
   lr: 0.01
+  n_epochs: 40
+  hidden_channels: [64, 64, 64]
+  batch_size: 32

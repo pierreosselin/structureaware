@@ -1,26 +1,26 @@
 import argparse
 import yaml
 import torch
-from sparse_smoothing.models import load_model
+from module.models import load_model
 from torch_geometric.data import DataLoader, Data
 
 def pre_training(config):
-    n_epochs = config["n_epochs"]
-    hidden_channels = config["hidden_channels"]
-    batch_size = config["batch_size"]
+    n_epochs = config["optimisation"]["n_epochs"]
+    hidden_channels = config["optimisation"]["hidden_channels"]
+    batch_size = config["optimisation"]["batch_size"]
 
     # Load data
-    l_data_train = torch.load(config["dataset_path"] + "dataset_train")
-    l_data_test = torch.load(config["dataset_path"] + "dataset_test")
+    l_data_train = torch.load(config["save_path"] + "dataset_train")
+    l_data_test = torch.load(config["save_path"] + "dataset_test")
 
     # Process data such that removing attributes not important for batching
     l_data_train = [Data(x=el.x, edge_index=el.edge_index, y=el.y) for el in l_data_train]
     l_data_test = [Data(x=el.x, edge_index=el.edge_index, y=el.y) for el in l_data_test]
 
     # Instanciate model
-    model = load_model(config)(hidden_channels=hidden_channels, n_features=l_data_train[0].x.shape[1], n_classes=2)
+    model = load_model(config)(n_features=l_data_train[0].x.shape[1], hidden_channels=hidden_channels, n_classes=2)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    optimizer = torch.optim.Adam(model.parameters(), lr=config["optimisation"]["lr"])
     criterion = torch.nn.CrossEntropyLoss()
 
     train_loader = DataLoader(l_data_train, batch_size = batch_size)
@@ -51,7 +51,7 @@ def pre_training(config):
         print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}')
 
     print("Saving model...")
-    torch.save(model.state_dict(), config["weights_path"] + config_name + ".pth")
+    torch.save(model.state_dict(), config["weights_path"])
     return 0
 
 
