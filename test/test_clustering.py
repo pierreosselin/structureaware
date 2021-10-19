@@ -75,8 +75,6 @@ def test_node_indexing():
         g.add_edges(np.array(edge_idx.T))
         result = apply_clustering(g, 0.7)
         node_community = np.array(result.membership)
-        communities, community_size = np.unique(node_community, return_counts=True)
-        n_communities = communities.shape[0]
         assert set(np.where(node_community == 0)[0]) == set(range(10))
         assert set(np.where(node_community == 1)[0]) == set(range(10, 20))
         assert set(np.where(node_community == 2)[0]) == set(range(20, 30))
