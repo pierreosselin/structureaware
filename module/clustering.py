@@ -1,7 +1,4 @@
-from typing import List, Union
-import torch
 import numpy as np
-import networkx as nx
 import igraph
 from torch_geometric.utils import is_undirected
 
@@ -64,7 +61,7 @@ def approximate_probabilities(community_prob, n_communities, digits):
     return community_prob
 
 
-def process_clustering(gr, param, digits):
+def process_clustering(gr, name_cluster, param, digits):
     """Process a graph to partition in clusters, merge pairwise similar communities
 
     Args:
@@ -78,22 +75,23 @@ def process_clustering(gr, param, digits):
         community_node ([1D Array]): List of nodes assigned to each community
         community_size (1D Array): Size of each community
     """
-
     # Detect if undirected or not
     undirected = is_undirected(gr.edge_index)
     if not undirected:
         raise Exception("The graph has to be undirected")
 
+    # Create igraph graph
     g = igraph.Graph()
     n = gr.x.shape[0]
     g.add_vertices(n)
     g.add_edges(np.array(gr.edge_index.T))
-    clusters = apply_clustering(g, param)
 
+    # APply Clustering
+    clusters = apply_clustering(g, param)
     node_community = clusters.membership
     communities, community_size = np.unique(node_community, return_counts=True)
     n_communities = communities.shape[0]
-    community_node = [[] for i in range(n_communities)]
+    community_node = [[] for _ in range(n_communities)]
 
     ## Compute community_node
     for i, el in enumerate(node_community):
@@ -101,7 +99,6 @@ def process_clustering(gr, param, digits):
 
     ###### Community probabilities
     community_prob = compute_probabilities(n_communities, gr, node_community, community_size)
-
     community_prob = approximate_probabilities(community_prob, n_communities, digits)
 
     return community_prob, node_community, community_node, community_size
