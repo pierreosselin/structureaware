@@ -4,8 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, global_mean_pool
 
-def load_model(config):
-    if config["optimisation"]["model"] == 'GCN_Classification':
+def load_model(model_name):
+    if model_name == 'GCN_Classification':
         return GCN_Classification
 
 class GCN_Classification(torch.nn.Module):

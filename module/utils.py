@@ -1,5 +1,6 @@
-## Utility functions for various tasks
+import torch
 
+## Utility functions for various tasks
 def compute_p_from_sbm(p_block, list_blocks):
     """Find the equivalent parameter p from the Erdos-Renyi model that matches the average number of edges from the given SBM graph
 
@@ -28,3 +29,23 @@ def compute_p_from_sbm(p_block, list_blocks):
         exp_edges_sbm += p_block[i][i] * list_blocks[i] * (list_blocks[i] - 1) / 2
     er_p = 2 * exp_edges_sbm / (n_graph*(n_graph - 1))
     return er_p
+
+def offset_idx(idx_mat: torch.LongTensor, lens: torch.LongTensor, dim_size: int, indices: List[int] = [0]):
+    offset = dim_size * torch.arange(len(lens), dtype=torch.long,
+                                     device=idx_mat.device).repeat_interleave(lens, dim=0)
+
+    idx_mat[indices, :] += offset[None, :]
+    return idx_mat
+
+def copy_idx(idx: torch.LongTensor, dim_size: int, ncopies: int, offset_both_idx: bool):
+    idx_copies = idx.repeat(1, ncopies)
+
+    offset = dim_size * torch.arange(ncopies, dtype=torch.long,
+                                     device=idx.device)[:, None].expand(ncopies, idx.shape[1]).flatten()
+
+    if offset_both_idx:
+        idx_copies += offset[None, :]
+    else:
+        idx_copies[0] += offset
+
+    return idx_copies

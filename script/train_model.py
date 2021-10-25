@@ -8,6 +8,7 @@ def pre_training(config):
     n_epochs = config["optimisation"]["n_epochs"]
     hidden_channels = config["optimisation"]["hidden_channels"]
     batch_size = config["optimisation"]["batch_size"]
+    model_name = config["optimisation"]["model"]
 
     # Load data
     l_data_train = torch.load(config["save_path"] + "dataset_train")
@@ -18,7 +19,7 @@ def pre_training(config):
     l_data_test = [Data(x=el.x, edge_index=el.edge_index, y=el.y) for el in l_data_test]
 
     # Instanciate model
-    model = load_model(config)(n_features=l_data_train[0].x.shape[1], hidden_channels=hidden_channels, n_classes=2)
+    model = load_model(model_name)(n_features=l_data_train[0].x.shape[1], hidden_channels=hidden_channels, n_classes=2)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config["optimisation"]["lr"])
     criterion = torch.nn.CrossEntropyLoss()
