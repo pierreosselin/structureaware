@@ -13,6 +13,7 @@ optimisation:
   n_epochs: 40
   hidden_channels: [64, 64, 64]
   batch_size: 32
+  n_classes: 2
 clustering:
   apply_clustering: false
   clustering_parameter: 0.7

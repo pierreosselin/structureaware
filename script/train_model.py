@@ -59,9 +59,7 @@ def pre_training(config):
 if __name__ == '__main__':
     # Argument definition
     parser = argparse.ArgumentParser()
-
     parser.add_argument('--config', type=str, default='default_config')
-
     args = parser.parse_args()
 
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
