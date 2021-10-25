@@ -61,7 +61,7 @@ def approximate_probabilities(community_prob, n_communities, digits):
     return community_prob
 
 
-def process_clustering(gr, name_cluster, param, digits):
+def process_clustering(gr, param, digits):
     """Process a graph to partition in clusters, merge pairwise similar communities
 
     Args:
