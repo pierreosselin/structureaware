@@ -19,6 +19,8 @@ def compute_p_from_sbm(p_block, list_blocks):
         raise Exception("The list of blocks does not match the clusters probabilities")
     if p_block.shape[0] != p_block.shape[1]:
         raise Exception("The probability matrix is not square")
+    if (p_block > 1.).any() or (p_block < 0.).any():
+        raise Exception("The matrix is not a probability matrix")
     
     for i in range(n_list_blocks):
         for j in range(i):

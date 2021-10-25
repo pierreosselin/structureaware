@@ -8,7 +8,7 @@ from tqdm import tqdm
 from torch_geometric.data import Data
 from torch_geometric.datasets import TUDataset
 import sknetwork as skn
-from utils import compute_p_from_sbm
+from module.utils import compute_p_from_sbm
 
 def generate_data(name_dataset, n_data=None, list_blocks=None, p=None, er_param=None, save_path=None, prop_train_test=None):
     """Generate desired dataset and split it in train/test dataset
@@ -34,8 +34,7 @@ def generate_data(name_dataset, n_data=None, list_blocks=None, p=None, er_param=
     if name_dataset == "reddit":
         return generate_reddit(save_path, prop_train_test)
     
-    print("Dataset not found")
-    return -1
+    raise Exception("Incorrect data set name")
     
 def generate_SBMS(n_data, list_blocks, p):
     """Function generating SBMS graphs
@@ -99,8 +98,11 @@ def generate_ER(n_data, list_blocks, p, er_param):
     ## If not specify compute coef such that the expected number of edges is the same
     if er_param:
         er_p = er_param
+        if (er_p > 1.) or (er_p < 0.):
+            raise Exception("ER parameter is not a probability")
     else:
         er_p = compute_p_from_sbm(p, list_blocks)
+    
     l_data = []
 
     ## Add condition for clustering or not, by default single cluster here
@@ -129,7 +131,7 @@ def generate_ER(n_data, list_blocks, p, er_param):
         l_data.append(data)
     return l_data
 
-def generate_synthetic(n_data, Mutaglist_blocks, p, er_param, save_path, prop_train_test):
+def generate_synthetic(n_data, list_blocks, p, er_param, save_path, prop_train_test):
     """Generate Synthetic dataset
 
     Args:
@@ -146,8 +148,7 @@ def generate_synthetic(n_data, Mutaglist_blocks, p, er_param, save_path, prop_tr
 
     #Check if data already exists
     if os.path.isfile(save_path + "dataset_test"):
-        print("Dataset already exists, delete it beforehand")
-        return 0
+        raise Exception("Dataset already exists, delete it beforehand")
        
     l_data_sbm = generate_SBMS(n_data, list_blocks, p)
     l_data_er = generate_ER(n_data, list_blocks, p, er_param)
@@ -230,6 +231,4 @@ def generate_reddit(save_path, prop_train_test):
     n_train = int(n_data*prop_train_test)
     l_data_train, l_data_test = l_data[:n_train], l_data[n_train:]
 
-    # Save data
-    torch.save(l_data_train, save_path + "dataset_train")
-    torch.save(l_data_test, save_path + "dataset_test")
+    return l_data_train, l_data_test
