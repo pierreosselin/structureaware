@@ -6,6 +6,11 @@ from module.utils import offset_idx, copy_idx
 from torch_sparse import coalesce
 
 
+def load_perturbation(name):
+    if name == "bernoulli":
+        return sample_perturbed_graphs
+        
+
 def offset_idx(idx_mat: torch.LongTensor, lens: torch.LongTensor, dim_size: int, indices: List[int] = [0]):
     offset = dim_size * torch.arange(len(lens), dtype=torch.long,
                                      device=idx_mat.device).repeat_interleave(lens, dim=0)
@@ -26,7 +31,8 @@ def copy_idx(idx: torch.LongTensor, dim_size: int, ncopies: int, offset_both_idx
 
     return idx_copies
 
-def sample_perturbed_graphs(data_idx, pf_minus, pf_plus, n, m, undirected, nsamples, offset_both_idx):
+def sample_perturbed_graphs(data_idx, param_noise, n, m, undirected, nsamples, offset_both_idx):
+
 
     if undirected:
         # select only one direction of the edges, ignore self loops
@@ -36,12 +42,12 @@ def sample_perturbed_graphs(data_idx, pf_minus, pf_plus, n, m, undirected, nsamp
     idx_copies = copy_idx(data_idx, n, nsamples, offset_both_idx)
     w_existing = torch.ones_like(idx_copies[0])
     #batch_existing = torch.arange(nsamples, device=data_idx.device).repeat_interleave(data_idx.shape[1], dim=0)
-    to_del = torch.cuda.BoolTensor(idx_copies.shape[1]).bernoulli_(pf_minus)
+    to_del = torch.cuda.BoolTensor(idx_copies.shape[1]).bernoulli_(param_noise)
     w_existing[to_del] = 0
 
     if offset_both_idx:
         assert n == m
-        nadd_persample_np = np.random.binomial(n * m, pf_plus, size=nsamples)  # 6x faster than PyTorch
+        nadd_persample_np = np.random.binomial(n * m, param_noise, size=nsamples)  # 6x faster than PyTorch
         nadd_persample = torch.cuda.FloatTensor(nadd_persample_np)
         nadd_persample_with_repl = torch.round(torch.log(1 - nadd_persample / (n * m))
                                                / np.log(1 - 1 / (n * m))).long()
@@ -60,7 +66,7 @@ def sample_perturbed_graphs(data_idx, pf_minus, pf_plus, n, m, undirected, nsamp
             to_add = to_add[:, to_add[0] < to_add[1]]
 
     else:
-        nadd = np.random.binomial(nsamples * n * m, pf_plus)  # 6x faster than PyTorch
+        nadd = np.random.binomial(nsamples * n * m, param_noise)  # 6x faster than PyTorch
         nadd_with_repl = int(np.round(np.log(1 - nadd / (nsamples * n * m))
                                       / np.log(1 - 1 / (nsamples * n * m))))
         to_add = data_idx.new_empty([2, nadd_with_repl])
@@ -115,50 +121,16 @@ def predict_smooth_model(attr_idx, edge_idx, pf, model, n, d, nc, n_samples, bat
     return votes.cpu().numpy()
 
 
-def predict_smooth_gnn_classification_community(loader, sample_config, model, n, d, nc, batch_size=1):
-    """
-    Predict smooth gnn for classification
-    Parameters
-    ----------
-    loader: torch_geometric.data.DataLoader
-        Data Loader for graphs dataset. Must contain a community indexing in it
-    sample_config: dict
-        Configuration specifying the sampling probabilities
-    model : torch.nn.Module
-        The GNN model.
-    n : int
-        Number of graphs
-    d : int
-        Number of features
-    nc : int
-        Number of classes
-    batch_size : int
-        Number of graphs to sample per batch (for vote evaluation)
-
-    Returns
-    -------
-    votes : array-like [n, nc]
-        The votes per class for each graph.
-    """
-
-    n_samples = sample_config.get('n_samples', 0)
-    alpha = sample_config.get('parameter', 0)
-    dataset = sample_config.get('dataset', 0)
+def predict_smooth_gnn_classification_community(loader, n_samples, param_noise, dataset_name, model, n, nc, batch_size=1):
+    
     model.eval()
-
     votes = torch.zeros((n, nc), dtype=torch.long, device=next(model.parameters()).device)
-
     with torch.no_grad():
-
         assert n_samples % batch_size == 0
-
-        # n_samples : number of samples for votes
-        # batch_size : number of these samples forwarded in gnn model at a time
         nbatches = n_samples // batch_size
 
         # Loop over the graphs in the dataset
         for i, data in enumerate(loader):
-
             #Get the graph structure and attributes
             edge_idx = data.edge_index.cuda()
             x = data.x.cuda()
@@ -180,7 +152,7 @@ def predict_smooth_gnn_classification_community(loader, sample_config, model, n,
                     node_community=node_community, community_node=community_node, community_size=community_size, community_prob=community_prob,
                     nsamples=batch_size, n_nodes=n_graph)
                 
-                if dataset == "synthetic":
+                if dataset_name == "synthetic":
                     ### Recompute the features
                     ## With feature recomputation
                     #adj = skn.utils.edgelist2adjacency(np.array(edge_idx_batch.cpu()).T)
@@ -202,4 +174,3 @@ def predict_smooth_gnn_classification_community(loader, sample_config, model, n,
             if i%10 == 0:
                 print(f'Processed {i}/{n} graphs')
     return votes.cpu().numpy()
-
