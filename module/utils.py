@@ -1,4 +1,3 @@
-## Utility functions for various tasks
 def compute_p_from_sbm(p_block, list_blocks):
     """Find the equivalent parameter p from the Erdos-Renyi model that matches the average number of edges from the given SBM graph
 

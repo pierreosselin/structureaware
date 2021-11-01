@@ -2,24 +2,28 @@
 dataset: synthetic
 save_path: data/synthetic/dataset/
 override_save: true
-weight_path: data/synthetic/pretrained_models/GCN.pth
-override_path: true
+weight_path: data/synthetic/pretrained_models/
+override_weight: true
+vote_path: data/synthetic/vote/
+override_vote: true
 n_data_per_class: 300
 list_blocks: [20,20,20]
 block_probs: [[0.2, 0.02, 0.02], [0.02, 0.3, 0.02], [0.02, 0.02, 0.4]]
 er_param: null
 prop_train_test: 0.7
-perturbation: bernoulli
 optimisation:
   model: GCN_Classification
   lr: 0.02
   n_epochs: 40
-  hidden_channels: [64, 64, 64, 64]
+  hidden_channels: [64, 64, 64]
   batch_size: 32
   n_classes: 2
 clustering:
   apply_clustering: false
   clustering_parameter: 0.7
   digits: 2
-bernoulli: [0.05, 0.1]
-community: [0.05, 0.1]
+certification:
+  perturbation: bernoulli
+  sample_eval: 1000
+  parameter_list: [0.05, 0.1]
+  batch_size: 200

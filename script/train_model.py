@@ -5,16 +5,32 @@ import yaml
 import torch
 from module.models import load_model
 from torch_geometric.data import DataLoader, Data
+import shutil
+from pathlib import Path
 
 def pre_training(config):
     n_epochs = config["optimisation"]["n_epochs"]
     hidden_channels = config["optimisation"]["hidden_channels"]
     batch_size = config["optimisation"]["batch_size"]
+    lr=config["optimisation"]["lr"]
     model_name = config["optimisation"]["model"]
+    override = config["optimisation"]["model"]
+
+    save_path, weight_path = config["save_path"], config["weight_path"]
+
+    ###Create folders for output, override if necessary
+    path_creation = Path(f"./{weight_path}")
+    if path_creation.exists():
+        if override:
+            print("The dataset folder already exists and the override option is on, dataset deleted.")
+            shutil.rmtree(path_creation)
+        else:
+            raise Exception("The dataset folder already exists and the override option is off, dataset generation aborted.")
+    path_creation.mkdir(parents=True, exist_ok=True)
 
     # Load data
-    l_data_train = torch.load(config["save_path"] + "dataset_train")
-    l_data_test = torch.load(config["save_path"] + "dataset_test")
+    l_data_train = torch.load(save_path + "dataset_train")
+    l_data_test = torch.load(save_path + "dataset_test")
 
     # Process data such that removing attributes not important for batching
     l_data_train = [Data(x=el.x, edge_index=el.edge_index, y=el.y) for el in l_data_train]
@@ -23,7 +39,7 @@ def pre_training(config):
     # Instanciate model
     model = load_model(model_name)(n_features=l_data_train[0].x.shape[1], hidden_channels=hidden_channels, n_classes=2)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=config["optimisation"]["lr"])
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = torch.nn.CrossEntropyLoss()
 
     train_loader = DataLoader(l_data_train, batch_size = batch_size)
@@ -54,7 +70,7 @@ def pre_training(config):
         print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}')
 
     print("Saving model...")
-    torch.save(model.state_dict(), config["weights_path"])
+    torch.save(model.state_dict(), weight_path + "GCN.pth")
     return 0
 
 

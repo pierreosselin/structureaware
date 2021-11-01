@@ -52,3 +52,5 @@ def test_pertubation_community():
                 for j in range(i):
                         if (j, i) not in initial_edges:
                                 assert abs(count_matrix[j,i] - param_noise*community_prob[node_community[j],node_community[i]]) < 0.03
+
+## Test no (or very small) perturbation gives same accuracy

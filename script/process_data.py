@@ -20,9 +20,9 @@ def preprocessing(config):
     list_blocks = config["list_blocks"]
     p = config["block_probs"]
     er_param = config["er_param"]
-    save_path = config["save_path"]
+    save_path = config["vote_path"]
     prop_train_test = config["prop_train_test"]
-    override = config["override_save"]
+    override = config["override_weight"]
 
     ###Create folders for output, overide if necessary
     path_creation = Path(f"./{save_path}")

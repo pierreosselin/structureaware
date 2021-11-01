@@ -9,6 +9,9 @@ from module.models import load_model
 from torch_geometric.data import DataLoader
 from module.prediction import load_perturbation
 import torch.nn.functional as F
+import shutil
+from pathlib import Path
+
 
 def vote(config):
     """Make prediction of the smoothed models
@@ -18,27 +21,40 @@ def vote(config):
     """
     # Load dataset
     l_data_test = torch.load(config["save_path"] + "dataset_train")
+    n_graph = len(l_data_test)
     n, nc = l_data_test[0].x.shape[0], config["optimisation"]["n_classes"]
     loader_test = DataLoader(l_data_test, batch_size = 1, shuffle = False)
     
     # Load config parameters
-    hidden_layers, n_class, d_features = config["hidden_channels"], config["n_classes"], l_data_test[0].x.shape[1]
-    model = load_model(config["model"])(hidden_channels=hidden_layers, n_features=d_features, n_classes=n_class).cuda()
-    model.load_state_dict(torch.load(config["weight_path"]))
+    hidden_layers, n_class, d_features = config["optimisation"]["hidden_channels"], config["optimisation"]["n_classes"], l_data_test[0].x.shape[1]
+    model = load_model(config["optimisation"]["model"])(hidden_channels=hidden_layers, n_features=d_features, n_classes=n_class)
+    model.load_state_dict(torch.load(config["weight_path"] + "GCN.pth"))
+    model.to("cuda")
 
     # Load voting parameters    
-    n_samples = config["sample_eval"] # Number of samples to predict label probabilities
-    batch_size = config["batch_size"] # Number of graph perturbations before prediction
-    path_votes = config["path_votes"] # Path save votes
-    noise_type = config["perturbation"] # Type of perturbation
-    lp = config[noise_type] # List of parameters to try
+    n_samples = config["certification"]["sample_eval"] # Number of samples to predict label probabilities
+    batch_size = config["certification"]["batch_size"] # Number of graph perturbations before prediction
+    path_votes = config["vote_path"] # Path save votes
+    noise_type = config["certification"]["perturbation"] # Type of perturbation
+    lp = config["certification"]["parameter_list"] # List of parameters to try
+    override = config["override_vote"]
+
+    ###Create folders for output, overide if necessary
+    path_creation = Path(f"./{path_votes}")
+    if path_creation.exists():
+        if override:
+            print("The vote folder already exists and the override option is on, votes deleted.")
+            shutil.rmtree(path_creation)
+        else:
+            raise Exception("The vote folder already exists and the override option is off, vote generation aborted.")
+    path_creation.mkdir(parents=True, exist_ok=True)
 
     # Load type of perturbation
     perturbation_function = load_perturbation(noise_type)
 
     model.eval()
-    votes = torch.zeros((n, nc), dtype=torch.long, device=next(model.parameters()).device)
-    
+
+    votes = torch.zeros((n_graph, nc), dtype=torch.long, device=next(model.parameters()).device)
     ## Todo: Batch size might depend on the parameter (if many edges are created the memory might not be enough)
     for param_noise in tqdm(lp, desc="Loop over the parameter"):
         with torch.no_grad():
@@ -69,7 +85,7 @@ def vote(config):
                     preds_onehot = F.one_hot(predictions.to(torch.int64), int(nc)).sum(0)
                     votes[i] += preds_onehot
 
-    np.save(path_votes, votes)
+    torch.save(votes, path_votes + "votes")
 
 if __name__ == '__main__':
 
