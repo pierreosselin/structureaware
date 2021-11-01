@@ -54,3 +54,4 @@ def test_pertubation_community():
                                 assert abs(count_matrix[j,i] - param_noise*community_prob[node_community[j],node_community[i]]) < 0.03
 
 ## Test no (or very small) perturbation gives same accuracy
+## Initialize simple model test no pertubation no change accuracy
