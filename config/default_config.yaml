@@ -1,7 +1,9 @@
 ## Configuration File
-dataset: mutag
-save_path: data/mutag/dataset/
-weight_path: data/mutag/pretrained_models/GCN.pth
+dataset: synthetic
+save_path: data/synthetic/dataset/
+override_save: true
+weight_path: data/synthetic/pretrained_models/GCN.pth
+override_path: true
 n_data_per_class: 300
 list_blocks: [20,20,20]
 block_probs: [[0.2, 0.02, 0.02], [0.02, 0.3, 0.02], [0.02, 0.02, 0.4]]
@@ -10,9 +12,9 @@ prop_train_test: 0.7
 perturbation: bernoulli
 optimisation:
   model: GCN_Classification
-  lr: 0.01
+  lr: 0.02
   n_epochs: 40
-  hidden_channels: [64, 64, 64]
+  hidden_channels: [64, 64, 64, 64]
   batch_size: 32
   n_classes: 2
 clustering:

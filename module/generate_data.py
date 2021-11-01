@@ -101,7 +101,7 @@ def generate_ER(n_data, list_blocks, p, er_param):
         if (er_p > 1.) or (er_p < 0.):
             raise Exception("ER parameter is not a probability")
     else:
-        er_p = compute_p_from_sbm(p, list_blocks)
+        er_p = compute_p_from_sbm(np.array(p), list_blocks)
     
     l_data = []
 

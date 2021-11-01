@@ -22,6 +22,17 @@ def load_perturbation(name):
     
 
 def offset_idx(idx_mat: torch.LongTensor, lens: torch.LongTensor, dim_size: int, indices = [0]):
+    """Offset the edge indices according to the number of nodes in the graph to format as a batch
+
+    Args:
+        idx_mat (torch.LongTensor): Array of edges
+        lens (torch.LongTensor): Number of added edges per sample
+        dim_size (int): Numbe of nodes in the graph
+        indices (list, optional): Dimensions to offset. Defaults to [0].
+
+    Returns:
+        (torch.LongTensor): Offset matrix
+    """
     offset = dim_size * torch.arange(len(lens), dtype=torch.long,
                                      device=idx_mat.device).repeat_interleave(lens, dim=0)
 
@@ -43,9 +54,9 @@ def sample_perturbed_graphs_bernoulli(data_idx, n, batch_size, param_noise, **ar
 
     Args:
         data_idx ([2, n_edges] array): Array of the graph edges
-        n (Int): Number of nodes in the graph
-        batch_size (Int): Batch size for the number of graph to sample
-        param_noise (Float): Bernoulli Parameter
+        n (int): Number of nodes in the graph
+        batch_size (int): Batch size for the number of graph to sample
+        param_noise (float): Bernoulli Parameter
 
     Returns:
         [2, m] array: Array of batch of perturbed graphs
@@ -89,14 +100,24 @@ def sample_perturbed_graphs_bernoulli(data_idx, n, batch_size, param_noise, **ar
     return per_data_idx
 
 def sample_perturbed_graphs_community(data_idx, n, batch_size, param_noise, community_node, community_size, community_prob):
-    
+    """Sample pertubed graphs according to community topological noise
+
+    Args:
+        data_idx ([2, n_edges] array): Array of the graph edges
+        n (int): Number of nodes in the graph
+        batch_size (int): Batch size for the number of graph to sample
+        param_noise (float): Coefficient of proportionality for the probability matrix
+        community_node (array):  Array representing the list of nodes in each community
+        community_size ([int]): List of community sizes
+        community_prob (array): Probability of inter and intra clustering
+
+    Returns:
+        array: Batch of sampled graph according to the noise distribution
+    """
     p_communities = param_noise*community_prob
     n_Clusters = community_size.shape[0]
     data_idx = data_idx[:, data_idx[0] < data_idx[1]]
     idx_copies = copy_idx(data_idx, n, batch_size)
-
-    # Vector of size CxC with successes corresponding to the cardinal
-    # print("Before data:", idx_copies)
 
     ## Next step: populate a tensor of size number of successes, populate random number size of the corresponding cluster and assign node through mapping
     to_add_total = torch.empty(2, 0).long().cuda()
@@ -147,80 +168,3 @@ def sample_perturbed_graphs_community(data_idx, n, batch_size, param_noise, comm
     per_data_idx = torch.cat((per_data_idx, per_data_idx[[1, 0]]), 1)
 
     return per_data_idx
-
-
-
-
-def predict_smooth_model(attr_idx, edge_idx, pf, model, n, d, nc, n_samples, batch_size=1):
-
-    model.eval()
-    votes = torch.zeros((n, nc), dtype=torch.long, device=edge_idx.device)
-    with torch.no_grad():
-        assert n_samples % batch_size == 0
-        nbatches = n_samples // batch_size
-        for _ in tqdm(range(nbatches)):
-            edge_idx_batch = sample_perturbed_graphs(data_idx=edge_idx, n=n, m=n, undirected=True,
-                                               pf=pf, nsamples=batch_size, offset_both_idx=True)
-            attr_idx_batch = copy_idx(idx=attr_idx, dim_size=n, ncopies=batch_size, offset_both_idx=False)
-            predictions = model(attr_idx=attr_idx_batch, edge_idx=edge_idx_batch,
-                                n=batch_size * n, d=d).argmax(1)
-            preds_onehot = F.one_hot(predictions, int(nc)).reshape(batch_size, n, nc).sum(0)
-            votes += preds_onehot
-    return votes.cpu().numpy()
-
-
-
-
-def predict_smooth_gnn_classification_community(loader, n_samples, param_noise, dataset_name, model, n, nc, batch_size=1):
-    
-    model.eval()
-    votes = torch.zeros((n, nc), dtype=torch.long, device=next(model.parameters()).device)
-    with torch.no_grad():
-        assert n_samples % batch_size == 0
-        nbatches = n_samples // batch_size
-
-        # Loop over the graphs in the dataset
-        for i, data in enumerate(loader):
-            #Get the graph structure and attributes
-            edge_idx = data.edge_index.cuda()
-            x = data.x.cuda()
-            n_graph = x.shape[0]
-            x_batch = x.repeat(batch_size, 1)
-            batch_idx = torch.arange(batch_size, device=edge_idx.device).repeat_interleave(n_graph, dim=0)
-            node_community = data.node_community
-            community_node = [torch.tensor(el).clone().detach().cuda() for el in data.community_node[0]]
-            community_size = data.community_size
-            community_prob = alpha*data.community_prob
-
-            # Loop over the perturbation graph batches
-            for _ in range(nbatches):
-
-                ### First function: should output a batch of perturbed graph the size
-                # of batch_size. Including x_batch, edge_idx_batch and batch_idx.
-                # Could improve by copying x
-                edge_idx_batch = sample_multiple_graphs_classification_community(edge_idx=edge_idx, sample_config = sample_config,
-                    node_community=node_community, community_node=community_node, community_size=community_size, community_prob=community_prob,
-                    nsamples=batch_size, n_nodes=n_graph)
-                
-                if dataset_name == "synthetic":
-                    ### Recompute the features
-                    ## With feature recomputation
-                    #adj = skn.utils.edgelist2adjacency(np.array(edge_idx_batch.cpu()).T)
-                    #betweenness = skn.ranking.Katz()
-                    #scores = betweenness.fit_transform(adj)
-                    G = nx.Graph()
-                    G.add_nodes_from(range(x_batch.shape[0]))
-                    G.add_edges_from(np.array(edge_idx_batch.cpu()).T)
-                    d2 = nx.algorithms.cluster.clustering(G)
-                    x_batch[:, 0] = torch.tensor([d2[i] for i in range(n_graph)])
-                    #x_batch[:, 0] = torch.tensor(scores)
-
-                predictions = model(x=x_batch, edge_index=edge_idx_batch,
-                                    batch=batch_idx).argmax(1)
-                preds_onehot = F.one_hot(predictions.to(torch.int64), int(nc)).sum(0)
-
-                votes[i] += preds_onehot
-
-            if i%10 == 0:
-                print(f'Processed {i}/{n} graphs')
-    return votes.cpu().numpy()

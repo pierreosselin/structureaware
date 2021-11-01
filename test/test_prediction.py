@@ -4,8 +4,6 @@ import torch
 import networkx as nx
 import pytest
 
-
-
 ## Test edge probabilities under bernoulli
 def test_pertubation_bernoulli():
         data_idx = torch.tensor(np.array([[0,3,5],[1,4,6]])).cuda()
@@ -49,10 +47,8 @@ def test_pertubation_community():
 
         ## Check statistics of every edges
         for el1, el2 in initial_edges:
-                assert abs(count_matrix[el1, el2] - (1 - param_noise*community_prob[node_community[el1],node_community[el2]])) < 0.1
+                assert abs(count_matrix[el1, el2] - (1 - param_noise*community_prob[node_community[el1],node_community[el2]])) < 0.03
         for i in range(15):
                 for j in range(i):
                         if (j, i) not in initial_edges:
-                                assert abs(count_matrix[j,i] - param_noise*community_prob[node_community[j],node_community[i]]) < 0.1
-
-                                
+                                assert abs(count_matrix[j,i] - param_noise*community_prob[node_community[j],node_community[i]]) < 0.03
