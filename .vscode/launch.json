@@ -8,7 +8,7 @@
             "name": "Python: Community perturbation",
             "type": "python",
             "request": "launch",
-            "program": "/home/pierre/Git/communityaware/script/voting.py",
+            "program": "/home/pierre/Git/communityaware/script/certify.py",
             "console": "integratedTerminal"
         }
     ]
