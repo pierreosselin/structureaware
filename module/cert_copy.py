@@ -25,17 +25,8 @@ def pre_compute_regions_bernoulli(max_l, p):
             table_regions[i,j] = special.comb(i, j,exact=True) * (p**j) * ((1-p)**(i-j))
     return table_regions
 
-def certify_bernoulli(pstar, pprime, pnoise, l_max = 10):
 
-    #Precompute table of probabilities
-    table_regions = pre_compute_regions_bernoulli(l_max, pnoise)
-    reversed_table_regions = table_regions[:,::-1]
-
-    # Compute the cumulative sums of the probability that X are in curly H and curly Q
-    table_regions_cum_sum = np.cumsum(table_regions,axis=1)
-    reversed_table_regions_cum_sum = np.cumsum(reversed_table_regions,axis=1)
-
-    ## Compute lower bound on right label
+def compute_lower_bound_bernoulli(l_max, table_regions, reversed_table_regions, table_regions_cum_sum, reversed_table_regions_cum_sum, pstar):
     # Compute the threshold of regions for X
     k_star = np.argmax((table_regions_cum_sum > pstar), axis = 1)
 
@@ -51,7 +42,14 @@ def certify_bernoulli(pstar, pprime, pnoise, l_max = 10):
     indices = np.array(range(1, l_max+1))
     y_lower = b[np.arange(l_max), l_max - indices + k_star] + prop*reversed_table_regions[np.arange(l_max), l_max - indices + k_star]
 
-    ## Compute upper bound on wrong label
+    return y_lower
+
+def compute_upper_bound_bernoulli(l_max, table_regions, table_regions_cum_sum, reversed_table_regions_cum_sum, pprime):
+    
+    indices = np.array(range(1, l_max+1))
+    a = np.zeros((l_max,l_max+1))
+    a[:,1:] = table_regions_cum_sum
+
     # Compute the threshold of regions for X
     c = np.zeros((l_max,l_max+1))
     c[:,:-1] = reversed_table_regions_cum_sum[:, ::-1]
@@ -62,6 +60,24 @@ def certify_bernoulli(pstar, pprime, pnoise, l_max = 10):
     prop = diff / table_regions[np.arange(l_max), k_prime - 1] #Proportion of this region that needs to be included
 
     # Proba Y upper bounds
-    y_upper = a[np.arange(l_max), indices - k_prime] + prop*table_regions[indices - k_prime + 1]
+    y_upper = a[np.arange(l_max), indices - k_prime] + prop*table_regions[np.arange(l_max), indices - k_prime]
 
+    return y_upper
+
+def certify_bernoulli(pstar, pprime, pnoise, l_max = 10):
+    l_max += 1
+    #Precompute table of probabilities
+    table_regions = pre_compute_regions_bernoulli(l_max, pnoise)
+    reversed_table_regions = table_regions[:,::-1]
+
+    # Compute the cumulative sums of the probability that X are in curly H and curly Q
+    table_regions_cum_sum = np.cumsum(table_regions,axis=1)
+    reversed_table_regions_cum_sum = np.cumsum(reversed_table_regions,axis=1)
+
+    # Compute lower bound on right label
+    y_lower = compute_lower_bound_bernoulli(l_max, table_regions, reversed_table_regions, table_regions_cum_sum, reversed_table_regions_cum_sum, pstar)
+
+    # Compute upper bound on wrong label
+    y_upper = compute_upper_bound_bernoulli(l_max, table_regions, table_regions_cum_sum, reversed_table_regions_cum_sum, pprime)
+    
     return np.argmax(y_lower < y_upper) - 1

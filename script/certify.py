@@ -6,9 +6,10 @@ from module.cert_copy import certify_bernoulli
 
 
 def certify(config):
-    pstar, pprime, pnoise  = 0.8, 0.2, 0.1
-    certify_bernoulli(pstar, pprime, pnoise)
-    return 0
+    pstar, pprime, pnoise  = 0.99, 0.01, 0.1
+    l = certify_bernoulli(pstar, pprime, pnoise, l_max = 5)
+    print(l)
+    return l
 
 if __name__ == '__main__':
     # Argument definition
