@@ -1,6 +1,5 @@
 from module.cert_copy import pre_compute_regions_bernoulli, compute_lower_bound_bernoulli, compute_upper_bound_bernoulli
 import numpy as np
-import pytest
 
 def test_lower_bound():
     pstar, pprime, pnoise, l_max  = 0.99, 0.01, 0.1, 5

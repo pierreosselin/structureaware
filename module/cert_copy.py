@@ -6,7 +6,7 @@ def load_certificate(experiment):
         return certify_bernoulli
 
     if experiment == "SBM":
-        return NotImplementedError
+        return certify_community
 
 
 def pre_compute_regions_bernoulli(max_l, p):
@@ -65,6 +65,17 @@ def compute_upper_bound_bernoulli(l_max, table_regions, table_regions_cum_sum, r
     return y_upper
 
 def certify_bernoulli(pstar, pprime, pnoise, l_max = 10):
+    """Compute certification radius
+
+    Args:
+        pstar (float): Probability best label
+        pprime (float): Probability second best label
+        pnoise (float): Noise Bernoulli parameter
+        l_max (int, optional): Maximal Radius to certify. Defaults to 10.
+
+    Returns:
+        int: Radius
+    """
     l_max += 1
     #Precompute table of probabilities
     table_regions = pre_compute_regions_bernoulli(l_max, pnoise)
@@ -81,3 +92,16 @@ def certify_bernoulli(pstar, pprime, pnoise, l_max = 10):
     y_upper = compute_upper_bound_bernoulli(l_max, table_regions, table_regions_cum_sum, reversed_table_regions_cum_sum, pprime)
     
     return np.argmax(y_lower < y_upper) - 1
+
+def certify_community(pstar, pprime, pnoise, l_max = 10):
+    #pnoise is an array
+    # For every possible separation of lmax into C communities
+    # Compute ck 
+    # Sort ck
+    # Select Rgions such that pstar stay superior
+    # COmpute lower bound
+    # Compute upper bound with pprime
+    # 
+
+
+    raise NotImplementedError
