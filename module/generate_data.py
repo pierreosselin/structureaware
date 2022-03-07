@@ -7,7 +7,6 @@ import os.path
 from tqdm import tqdm
 from torch_geometric.data import Data
 from torch_geometric.datasets import TUDataset
-import sknetwork as skn
 from module.utils import compute_p_from_sbm
 
 def generate_data(name_dataset, n_data=None, list_blocks=None, p=None, er_param=None, save_path=None, prop_train_test=None):
@@ -53,14 +52,9 @@ def generate_SBMS(n_data, list_blocks, p):
     
     for _ in tqdm(range(n_data), desc = "Generate SBMs graphs..."):
         G = nx.generators.community.stochastic_block_model(list_blocks, p)
-        edges = G.edges
-        adj = skn.utils.edgelist2adjacency(edges)
-        betweenness = skn.ranking.Katz()
-        scores = betweenness.fit_transform(adj)
         
         ### Compute features
-        x = torch.zeros((n_graph, 1))
-        x[:, 0] = torch.tensor(scores)
+        x = torch.FloatTensor([nx.katz_centrality_numpy(G)[i] for i in range(G.number_of_nodes())]).unsqueeze(1)
         edge_idx = torch.from_numpy(np.array(G.edges).T)
         edge_idx = torch.cat((edge_idx, edge_idx[[1, 0]]), 1)
         y = torch.zeros(1).long()
@@ -79,7 +73,7 @@ def generate_SBMS(n_data, list_blocks, p):
     return l_data
 
 
-def generate_ER(n_data, list_blocks, p, er_param):
+def generate_ER(n_data, list_blocks, p, er_param=None):
     """Function generating ER graphs
 
     Args:
@@ -96,7 +90,7 @@ def generate_ER(n_data, list_blocks, p, er_param):
     n_graph = sum(list_blocks)
 
     ## If not specify compute coef such that the expected number of edges is the same
-    if er_param:
+    if er_param is None:
         er_p = er_param
         if (er_p > 1.) or (er_p < 0.):
             raise Exception("ER parameter is not a probability")
@@ -109,13 +103,9 @@ def generate_ER(n_data, list_blocks, p, er_param):
     for _ in tqdm(range(n_data), desc = "Generate ER graphs..."):
         G = nx.generators.random_graphs.erdos_renyi_graph(n_graph, er_p)
         edges = G.edges
-        adj = skn.utils.edgelist2adjacency(edges)
-        betweenness = skn.ranking.Katz()
-        scores = betweenness.fit_transform(adj)
 
         ###Compute Features
-        x = torch.zeros((n_graph, 1))
-        x[:, 0] = torch.tensor(scores)
+        x = torch.FloatTensor([nx.katz_centrality_numpy(G)[i] for i in range(G.number_of_nodes())]).unsqueeze(1)
         edge_idx = torch.from_numpy(np.array(G.edges).T)
         edge_idx = torch.cat((edge_idx, edge_idx[[1, 0]]), 1)
         y = torch.ones(1).long()
