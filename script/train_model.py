@@ -1,12 +1,12 @@
-import os, sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import argparse
-import yaml
-import torch
-from module.models import load_model
-from torch_geometric.data import DataLoader, Data
 import shutil
 from pathlib import Path
+
+import torch
+import yaml
+from module.models import load_model
+from torch_geometric.data import Data, DataLoader
+
 
 def pre_training(config):
     n_epochs = config["optimisation"]["n_epochs"]

@@ -1,13 +1,13 @@
-import os, sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from pathlib import Path
-from module.generate_data import generate_data
-import torch
 import argparse
-import yaml
-from tqdm import tqdm
-from module.clustering import process_clustering
 import shutil
+from pathlib import Path
+
+import torch
+import yaml
+from module.clustering import process_clustering
+from module.generate_data import generate_data
+from tqdm import tqdm
+
 
 def preprocessing(config):
     """Preprocessing routine saving the data and creating clusters

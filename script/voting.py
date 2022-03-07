@@ -1,16 +1,14 @@
-import os, sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import argparse
-import yaml
-import torch
-from tqdm import tqdm
-import numpy as np
-from module.models import load_model
-from torch_geometric.data import DataLoader
-from module.prediction import load_perturbation
-import torch.nn.functional as F
 import shutil
 from pathlib import Path
+
+import torch
+import torch.nn.functional as F
+import yaml
+from module.models import load_model
+from module.prediction import load_perturbation
+from torch_geometric.data import DataLoader
+from tqdm import tqdm
 
 
 def vote(config):
