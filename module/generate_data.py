@@ -90,7 +90,7 @@ def generate_ER(n_data, list_blocks, p, er_param=None):
     n_graph = sum(list_blocks)
 
     ## If not specify compute coef such that the expected number of edges is the same
-    if er_param is None:
+    if er_param is not None:
         er_p = er_param
         if (er_p > 1.) or (er_p < 0.):
             raise Exception("ER parameter is not a probability")

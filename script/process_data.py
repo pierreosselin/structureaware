@@ -1,3 +1,5 @@
+"""Generate datasets, split into train and test and assign communities."""
+import os
 import argparse
 import shutil
 from pathlib import Path
@@ -50,18 +52,14 @@ def preprocessing(config):
                 datum.community_prob = torch.tensor(community_prob)
 
     # Save data
+    os.makedirs(config["save_path"], exist_ok=True)
     torch.save(l_data_train, config["save_path"] + "dataset_train")
     torch.save(l_data_test, config["save_path"] + "dataset_test")
-    return 0
 
 if __name__ == '__main__':
     # Argument definition
     parser = argparse.ArgumentParser()
-
     parser.add_argument('--config', type=str, default='default_config')
-
     args = parser.parse_args()
-
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
-
     preprocessing(config)
