@@ -4,7 +4,7 @@ from pathlib import Path
 
 import torch
 import yaml
-from module.models import load_model
+from module.models import GCN_Classification
 from torch_geometric.data import Data, DataLoader
 
 
@@ -37,7 +37,7 @@ def pre_training(config):
     l_data_test = [Data(x=el.x, edge_index=el.edge_index, y=el.y) for el in l_data_test]
 
     # Instanciate model
-    model = load_model(model_name)(n_features=l_data_train[0].x.shape[1], hidden_channels=hidden_channels, n_classes=2)
+    model = GCN_Classification(model_name)(n_features=l_data_train[0].x.shape[1], hidden_channels=hidden_channels, n_classes=2)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = torch.nn.CrossEntropyLoss()

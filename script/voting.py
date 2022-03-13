@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 import torch.nn.functional as F
 import yaml
-from module.models import load_model
+from module.models import GCN_Classification
 from module.prediction import load_perturbation
 from torch_geometric.data import DataLoader
 from tqdm import tqdm
@@ -25,7 +25,7 @@ def vote(config):
     
     # Load config parameters
     hidden_layers, n_class, d_features = config["optimisation"]["hidden_channels"], config["optimisation"]["n_classes"], l_data_test[0].x.shape[1]
-    model = load_model(config["optimisation"]["model"])(hidden_channels=hidden_layers, n_features=d_features, n_classes=n_class)
+    model = GCN_Classification(config["optimisation"]["model"])(hidden_channels=hidden_layers, n_features=d_features, n_classes=n_class)
     model.load_state_dict(torch.load(config["weight_path"] + "GCN.pth"))
     model.to("cuda")
 
