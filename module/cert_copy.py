@@ -1,12 +1,6 @@
 import numpy as np
 from scipy import special
 
-def load_certificate(experiment):
-    if experiment == "bernoulli":
-        return certify_bernoulli
-
-    if experiment == "SBM":
-        return certify_community
 
 
 def pre_compute_regions_bernoulli(max_l, p):

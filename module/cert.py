@@ -8,12 +8,6 @@ from scipy.stats import binom
 import scipy.special as sp
 import time
 
-def load_certificate(experiment):
-    if experiment == "bernoulli":
-        return binary_certificate_grid
-
-    if experiment == "SBM":
-        return binary_certificate_grid_community
 
 
 def compute_rho_for_many(regions, p_emps, is_sorted=True, reverse=False):
