@@ -1,4 +1,4 @@
-from module.cert_copy import pre_compute_regions_bernoulli, compute_lower_bound_bernoulli, compute_upper_bound_bernoulli
+from module.cert import pre_compute_regions_bernoulli, compute_lower_bound_bernoulli, compute_upper_bound_bernoulli
 import numpy as np
 
 def test_lower_bound():

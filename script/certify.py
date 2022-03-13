@@ -1,7 +1,7 @@
 import argparse
 
 import yaml
-from module.cert_copy import certify_bernoulli
+from module.cert import certify_bernoulli
 
 
 def certify(config):
