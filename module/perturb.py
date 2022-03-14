@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 import torch.nn.functional as F
 from torch_sparse import coalesce
-
+from .utils import copy_idx, offset_idx
 
 def load_perturbation(name):
     """Load the type of perturbation to use
@@ -19,35 +19,6 @@ def load_perturbation(name):
     
     if name == "community":
         return sample_perturbed_graphs_community
-    
-
-def offset_idx(idx_mat: torch.LongTensor, lens: torch.LongTensor, dim_size: int, indices = [0]):
-    """Offset the edge indices according to the number of nodes in the graph to format as a batch
-
-    Args:
-        idx_mat (torch.LongTensor): Array of edges
-        lens (torch.LongTensor): Number of added edges per sample
-        dim_size (int): Numbe of nodes in the graph
-        indices (list, optional): Dimensions to offset. Defaults to [0].
-
-    Returns:
-        (torch.LongTensor): Offset matrix
-    """
-    offset = dim_size * torch.arange(len(lens), dtype=torch.long,
-                                     device=idx_mat.device).repeat_interleave(lens, dim=0)
-
-    idx_mat[indices, :] += offset[None, :]
-    return idx_mat
-
-def copy_idx(idx: torch.LongTensor, dim_size: int, ncopies: int):
-    idx_copies = idx.repeat(1, ncopies)
-
-    offset = dim_size * torch.arange(ncopies, dtype=torch.long,
-                                     device=idx.device)[:, None].expand(ncopies, idx.shape[1]).flatten()
-
-    idx_copies += offset[None, :]
-
-    return idx_copies
 
 def sample_perturbed_graphs_bernoulli(data_idx, n, batch_size, param_noise, **args):
     """Sample pertubed graphs according to bernoulli topological noise
