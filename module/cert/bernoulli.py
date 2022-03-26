@@ -1,86 +1,74 @@
 import numpy as np
+import gmpy2
 from scipy import special
+from scipy.stats import binom
+from functools import partial
 
-def pre_compute_regions_bernoulli(max_l, p):
-    """Pre compute the regions probabilities
-
-    Args:
-        max_l (int): maximum radius to certify
-        p (float): noise probability
+def max_bernoulli_radius(p_A: float, p_noise: float, p_B: float=None, precision: int=1000):
+    """Find the largest radius such that certify_bernoulli(p_A, p_noise, radius, p_B, precision) is True
 
     Returns:
-        table_regions (2d array): Table of regions probability table_regions[i, j] corresponds to H_{j}^{i} 
+        int: largest radius 
     """
-    table_regions = np.zeros((max_l, max_l))
-    for i in range(max_l):
-        for j in range(i+1):
-            table_regions[i,j] = special.comb(i, j,exact=True) * (p**j) * ((1-p)**(i-j))
-    return table_regions
+    certificate = partial(certify_bernoulli, p_A=p_A, p_noise=p_noise, p_B=p_B, precision=precision)
+    radius = 1
+    while certificate(radius=radius):
+        radius += 1
+    return radius - 1
 
-
-def compute_lower_bound_bernoulli(l_max, table_regions, reversed_table_regions, table_regions_cum_sum, reversed_table_regions_cum_sum, pstar):
-    # Compute the threshold of regions for X
-    k_star = np.argmax((table_regions_cum_sum > pstar), axis = 1)
-
-    # Compute difference cum_sum at kstar and before to have proportion in Hij then keep this proportion
-    a = np.zeros((l_max,l_max+1))
-    a[:,1:] = table_regions_cum_sum
-    diff = pstar - a[np.arange(l_max), k_star] #Probability volume remaining in the last unaccepted region
-    prop = diff / table_regions[np.arange(l_max),k_star] #Proportion of this region that needs to be included
-
-    # Proba Y lower bounds
-    b = np.zeros((l_max, l_max+1))
-    b[:,1:] = reversed_table_regions_cum_sum
-    indices = np.array(range(1, l_max+1))
-    y_lower = b[np.arange(l_max), l_max - indices + k_star] + prop*reversed_table_regions[np.arange(l_max), l_max - indices + k_star]
-
-    return y_lower
-
-def compute_upper_bound_bernoulli(l_max, table_regions, table_regions_cum_sum, reversed_table_regions_cum_sum, pprime):
-    
-    indices = np.array(range(1, l_max+1))
-    a = np.zeros((l_max,l_max+1))
-    a[:,1:] = table_regions_cum_sum
-
-    # Compute the threshold of regions for X
-    c = np.zeros((l_max,l_max+1))
-    c[:,:-1] = reversed_table_regions_cum_sum[:, ::-1]
-    k_prime = np.argmax((c < pprime), axis = 1) # >0
-
-    # Compute difference cum_sum at kstar and before to have proportion in Hij then keep this proportion
-    diff = pprime - c[np.arange(l_max), k_prime] #Probability volume remaining in the last unaccepted region
-    prop = diff / table_regions[np.arange(l_max), k_prime - 1] #Proportion of this region that needs to be included
-
-    # Proba Y upper bounds
-    y_upper = a[np.arange(l_max), indices - k_prime] + prop*table_regions[np.arange(l_max), indices - k_prime]
-
-    return y_upper
-
-def certify_bernoulli(pstar, pprime, pnoise, l_max = 10):
-    """Compute certification radius
+def certify_bernoulli(p_A: float, p_noise: float, radius: int, p_B: float=None, precision: int=1000) -> bool:
+    """Return True if can certify around the point x.
 
     Args:
-        pstar (float): Probability best label
-        pprime (float): Probability second best label
-        pnoise (float): Noise Bernoulli parameter
-        l_max (int, optional): Maximal Radius to certify. Defaults to 10.
+        p_A (float): lower bound on the probability of the predicted class
+        p_noise (float): noise parameter used for edge flips
+        radius (int): number of edge flips to certify with respect to
+        p_B (float, optional): upper bound on the probability of the runner-up class. Defaults to 1-p_A.
+        precision (int, optional): precision used for calculations. Defaults to 1000.
+
+    Raises:
+        ValueError: If p_noise >= 0.5 (we assume it to be less).
 
     Returns:
-        int: Radius
+        bool: True if certified, else False.
     """
-    l_max += 1
-    #Precompute table of probabilities
-    table_regions = pre_compute_regions_bernoulli(l_max, pnoise)
-    reversed_table_regions = table_regions[:,::-1]
-
-    # Compute the cumulative sums of the probability that X are in curly H and curly Q
-    table_regions_cum_sum = np.cumsum(table_regions,axis=1)
-    reversed_table_regions_cum_sum = np.cumsum(reversed_table_regions,axis=1)
-
-    # Compute lower bound on right label
-    y_lower = compute_lower_bound_bernoulli(l_max, table_regions, reversed_table_regions, table_regions_cum_sum, reversed_table_regions_cum_sum, pstar)
-
-    # Compute upper bound on wrong label
-    y_upper = compute_upper_bound_bernoulli(l_max, table_regions, table_regions_cum_sum, reversed_table_regions_cum_sum, pprime)
+    # check inputs are valid
+    if p_noise >= 0.5:
+        raise ValueError('p_noise is assumed to be <= 0.5')
+    if radius <= 0:
+        raise ValueError('Expect radius to be non-negative integer.')
+    if p_B is None:
+        p_B = 1 - p_A
     
-    return np.argmax(y_lower < y_upper) - 1
+    with gmpy2.context(precision=precision):
+        ## Compute certificate
+        # compute likelihood ratios
+        c = ((1-p_noise)/p_noise) ** np.arange(-radius, radius+1, 2)
+
+        # compute P(X in regions) and find a* and b* with this
+        prob_X_in_H = binom.pmf(k=np.arange(0, radius+1), n=radius, p=p_noise)
+        a_star = np.where(np.cumsum(prob_X_in_H) > p_A)[0][0]
+        b_star = radius-np.where(np.cumsum(prob_X_in_H[::-1]) > p_B)[0][0]
+
+        # compute P(Y in regions) and find lower bound on p_A and upper bound on p_B for Y
+        prob_Y_in_H = c * prob_X_in_H
+        lower_bound = np.sum(prob_Y_in_H[:a_star+1])
+        upper_bound = np.sum(prob_Y_in_H[b_star:])
+
+        # certified if lower_bound > upper_bound
+        certified = lower_bound > upper_bound
+
+        ## sanity check calculations
+        # Regions are disjoint unions of space
+        assert np.isclose(sum(prob_X_in_H), 1) 
+        assert np.isclose(sum(prob_Y_in_H), 1)
+
+        # check a_star is correct and the smallest possible
+        assert np.sum(prob_X_in_H[:a_star+1]) >= p_A  
+        assert np.sum(prob_X_in_H[:a_star]) < p_A 
+
+        # check b_star is correct and the largest possible          
+        assert np.sum(prob_X_in_H[b_star:]) >= p_B 
+        assert np.sum(prob_X_in_H[b_star+1:]) < p_B 
+
+    return certified
