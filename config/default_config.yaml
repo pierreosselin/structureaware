@@ -11,11 +11,12 @@ list_blocks: [20,20,20]
 block_probs: [[0.2, 0.02, 0.02], [0.02, 0.3, 0.02], [0.02, 0.02, 0.4]]
 er_param: null
 prop_train_test: 0.7
+data_split: [0.7, 0.2, 0.1]
 optimisation:
   model: GCN_Classification
-  lr: 0.02
+  lr: 0.01
   n_epochs: 40
-  hidden_channels: [64, 64, 64]
+  hidden_channels: [32,32,32]
   batch_size: 32
   n_classes: 2
 clustering:
