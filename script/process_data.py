@@ -24,17 +24,6 @@ def preprocessing(config):
     er_param = config["er_param"]
     save_path = config["vote_path"]
     prop_train_test = config["prop_train_test"]
-    override = config["override_weight"]
-
-    ###Create folders for output, overide if necessary
-    path_creation = Path(f"./{save_path}")
-    if path_creation.exists():
-        if override:
-            print("The dataset folder already exists and the override option is on, dataset deleted.")
-            shutil.rmtree(path_creation)
-        else:
-            raise Exception("The dataset folder already exists and the override option is off, dataset generation aborted.")
-    path_creation.mkdir(parents=True, exist_ok=True)
 
     l_data_train, l_data_test = generate_data(name_dataset=name_dataset, n_data=n_data, 
                             list_blocks=list_blocks, p=p, er_param=er_param, save_path=save_path, prop_train_test=prop_train_test)

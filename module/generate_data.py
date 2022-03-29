@@ -102,7 +102,6 @@ def generate_ER(n_data, list_blocks, p, er_param=None):
     ## Add condition for clustering or not, by default single cluster here
     for _ in tqdm(range(n_data), desc = "Generate ER graphs..."):
         G = nx.generators.random_graphs.erdos_renyi_graph(n_graph, er_p)
-        edges = G.edges
 
         ###Compute Features
         x = torch.FloatTensor([nx.katz_centrality_numpy(G)[i] for i in range(G.number_of_nodes())]).unsqueeze(1)

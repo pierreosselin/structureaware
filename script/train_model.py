@@ -8,36 +8,25 @@ from module.models import GCN_Classification
 from torch_geometric.data import Data, DataLoader
 
 
-def pre_training(config):
+def pre_training(config, device):
     n_epochs = config["optimisation"]["n_epochs"]
     hidden_channels = config["optimisation"]["hidden_channels"]
     batch_size = config["optimisation"]["batch_size"]
     lr=config["optimisation"]["lr"]
-    model_name = config["optimisation"]["model"]
     override = config["optimisation"]["model"]
 
     save_path, weight_path = config["save_path"], config["weight_path"]
-
-    ###Create folders for output, override if necessary
-    path_creation = Path(f"./{weight_path}")
-    if path_creation.exists():
-        if override:
-            print("The dataset folder already exists and the override option is on, dataset deleted.")
-            shutil.rmtree(path_creation)
-        else:
-            raise Exception("The dataset folder already exists and the override option is off, dataset generation aborted.")
-    path_creation.mkdir(parents=True, exist_ok=True)
 
     # Load data
     l_data_train = torch.load(save_path + "dataset_train")
     l_data_test = torch.load(save_path + "dataset_test")
 
     # Process data such that removing attributes not important for batching
-    l_data_train = [Data(x=el.x, edge_index=el.edge_index, y=el.y) for el in l_data_train]
-    l_data_test = [Data(x=el.x, edge_index=el.edge_index, y=el.y) for el in l_data_test]
+    l_data_train = [Data(x=el.x, edge_index=el.edge_index, y=el.y).to(device) for el in l_data_train]
+    l_data_test = [Data(x=el.x, edge_index=el.edge_index, y=el.y).to(device) for el in l_data_test]
 
     # Instanciate model
-    model = GCN_Classification(model_name)(n_features=l_data_train[0].x.shape[1], hidden_channels=hidden_channels, n_classes=2)
+    model = GCN_Classification(n_features=l_data_train[0].x.shape[1], hidden_channels=hidden_channels, n_classes=2).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = torch.nn.CrossEntropyLoss()
@@ -78,9 +67,10 @@ if __name__ == '__main__':
     # Argument definition
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='default_config')
+    parser.add_argument('--device', type=str, default='cuda:2')
     args = parser.parse_args()
 
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
-
-    pre_training(config)
+    device = args.device
+    pre_training(config, device)
 
