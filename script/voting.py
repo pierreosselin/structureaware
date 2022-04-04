@@ -7,45 +7,43 @@ import torch.nn.functional as F
 import yaml
 from module.models import GCN_Classification
 from module.perturb import load_perturbation
+from module.data import Synthetic
 from torch_geometric.data import DataLoader
 from tqdm import tqdm
+from os.path import join
 
-
-def vote(config):
+def vote(data_path, weight_path, hidden_channels, device, sample_eval, batch_size, vote_path, perturbation, parameter_list):
     """Make prediction of the smoothed models
 
     Args:
         config ([Dic]): Dictionary of configuration
     """
+
     # Load dataset
-    l_data_test = torch.load(config["save_path"] + "dataset_train")
-    n_graph = len(l_data_test)
-    n, nc = l_data_test[0].x.shape[0], config["optimisation"]["n_classes"]
-    loader_test = DataLoader(l_data_test, batch_size = 1, shuffle = False)
+    #l_data_test = torch.load(save_path + "dataset_train")
+    #n_graph = len(l_data_test)
+    #n, nc = l_data_test[0].x.shape[0], config["optimisation"]["n_classes"]
+    #loader_test = DataLoader(l_data_test, batch_size = 1, shuffle = False)
+
+    # Load dataset
+    dataset = Synthetic(data_path)
+    test_loader = dataset.dataloader('test', batch_size=1)
+    n_graph = len(test_loader)
+    n, nc, d_features = dataset[0].num_nodes, dataset.num_classes, dataset.num_features
+
     
     # Load config parameters
-    hidden_layers, n_class, d_features = config["optimisation"]["hidden_channels"], config["optimisation"]["n_classes"], l_data_test[0].x.shape[1]
-    model = GCN_Classification(hidden_channels=hidden_layers, n_features=d_features, n_classes=n_class)
-    model.load_state_dict(torch.load(config["weight_path"] + "GCN.pth"))
-    model.to("cuda")
+    hidden_layers, n_class = hidden_channels, nc
+    model = GCN_Classification(hidden_channels=hidden_layers, num_features=d_features, num_classes=n_class)
+    model.load_state_dict(torch.load(weight_path + "GCN.pth"))
+    model.to(device)
 
     # Load voting parameters    
-    n_samples = config["certification"]["sample_eval"] # Number of samples to predict label probabilities
-    batch_size = config["certification"]["batch_size"] # Number of graph perturbations before prediction
-    path_votes = config["vote_path"] # Path save votes
-    noise_type = config["certification"]["perturbation"] # Type of perturbation
-    lp = config["certification"]["parameter_list"] # List of parameters to try
-    override = config["override_vote"]
-
-    ###Create folders for output, overide if necessary
-    path_creation = Path(f"./{path_votes}")
-    if path_creation.exists():
-        if override:
-            print("The vote folder already exists and the override option is on, votes deleted.")
-            shutil.rmtree(path_creation)
-        else:
-            raise Exception("The vote folder already exists and the override option is off, vote generation aborted.")
-    path_creation.mkdir(parents=True, exist_ok=True)
+    n_samples = sample_eval # Number of samples to predict label probabilities
+    batch_size = batch_size # Number of graph perturbations before prediction
+    path_votes = vote_path # Path save votes
+    noise_type = perturbation # Type of perturbation
+    lp = parameter_list # List of parameters to try
 
     # Load type of perturbation
     perturbation_function = load_perturbation(noise_type)
@@ -60,7 +58,7 @@ def vote(config):
             nbatches = n_samples // batch_size
 
             # Loop over the graphs in the dataset
-            for i, data in tqdm(enumerate(loader_test), desc="Loop over the data"):
+            for i, data in tqdm(enumerate(test_loader), desc="Loop over the data"):
 
                 #Get the graph structure and attributes
                 edge_idx = data.edge_index.cuda()
@@ -89,10 +87,20 @@ if __name__ == '__main__':
 
     # Argument definition
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='default_config')
+    parser.add_argument('--config', type=str, default='synthetic')
     args = parser.parse_args()
-
-    # Load Config
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
 
-    vote(config)
+    data_path = join('data', config['dataset'])
+    model_path = join('model', config['dataset'])
+    vote_path = join('votes', config['dataset'])
+
+    vote(data_path=data_path,
+         weight_path=model_path,
+         hidden_channels=config['optimisation']['hidden_channels'],
+         device='cuda:0',
+         sample_eval=config['certification']['sample_eval'],
+         batch_size=config['certification']['batch_size'],
+         vote_path=vote_path,
+         perturbation=config["certification"]["perturbation"],
+         parameter_list=config["certification"]["parameter_list"])
