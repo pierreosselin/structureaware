@@ -25,9 +25,9 @@ def generate_synthetic_data(graphs_per_class, sbm_community_sizes, sbm_parameter
     split = split_data(y, *data_split)
 
     # save
-    os.makedirs(join(data_path, 'raw'), exist_ok=True)
-    torch.save(data_list, join(data_path, 'raw', 'graphs.pt'))
-    torch.save(split,  join(data_path, 'raw', 'split.pt'))
+    os.makedirs(join(data_path, 'synthetic', 'raw'), exist_ok=True)
+    torch.save(data_list, join(data_path, 'synthetic', 'raw', 'graphs.pt'))
+    torch.save(split,  join(data_path, 'synthetic', 'raw', 'split.pt'))
 
 
 def ER(n, p):

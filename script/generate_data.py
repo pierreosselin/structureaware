@@ -12,6 +12,5 @@ if __name__ == '__main__':
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
     er_nodes = sum(config['community_sizes'])
     er_parameter = er_parameter_from_sbm(config['community_sizes'],  config['sbm_parameters'])
-    data_path = join('data', config['dataset'])
 
-    generate_synthetic_data(config['graphs_per_class'], config['community_sizes'], config['sbm_parameters'], er_nodes, er_parameter, data_path, config['data_split'])
+    generate_synthetic_data(config['graphs_per_class'], config['community_sizes'], config['sbm_parameters'], er_nodes, er_parameter, 'data', config['data_split'])

@@ -46,7 +46,7 @@ def train_model(max_epochs, lr, hidden_channels, batch_size, data_path, model_pa
     # save model
     print("Saving model...")
     os.makedirs(model_path, exist_ok=True)
-    torch.save(model.state_dict(), model_path + "GCN.pth")
+    torch.save(model.state_dict(), join(model_path, "weights.pt"))
 
 
 def train_epoch(model, train_loader, criterion, optimiser):
@@ -85,8 +85,8 @@ if __name__ == '__main__':
 
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
     device = args.device
-    data_path = join('data', config['dataset'])
-    model_path = join('model', config['dataset'])
+    data_path = 'data'
+    model_path = join('output', config['dataset'], 'weights')
 
     train_model(config['optimisation']['max_epochs'], config['optimisation']['lr'], config['optimisation']['hidden_channels'], config['optimisation']['batch_size'], data_path, model_path, device)
 

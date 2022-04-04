@@ -23,7 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--config', type=str, default='synthetic')
     args = parser.parse_args()
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
-    vote_path = join('votes', config['dataset'])
-    certificate_path = join('certificates', config['dataset'])
+    vote_path = join('output', config['dataset'], 'votes')
+    certificate_path = join('output', config['dataset'], 'certificates')
     noise = config['certification']['parameter_list'][-1]
     certify(vote_path, noise, certificate_path)

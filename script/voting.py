@@ -27,7 +27,7 @@ def vote(data_path, weight_path, hidden_channels, device, sample_eval, batch_siz
     # Load config parameters
     hidden_layers, n_class = hidden_channels, nc
     model = GCN_Classification(hidden_channels=hidden_layers, num_features=d_features, num_classes=n_class)
-    model.load_state_dict(torch.load(weight_path + "GCN.pth"))
+    model.load_state_dict(torch.load(join(weight_path, "weights.pt")))
     model.to(device)
 
     # Load voting parameters    
@@ -82,9 +82,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
 
-    data_path = join('data', config['dataset'])
-    model_path = join('model', config['dataset'])
-    vote_path = join('votes', config['dataset'])
+    data_path = 'data'
+    model_path = join('output', config['dataset'], 'weights')
+    vote_path = join('output', config['dataset'], 'votes')
 
     vote(data_path=data_path,
          weight_path=model_path,
