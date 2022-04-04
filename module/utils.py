@@ -31,6 +31,20 @@ def compute_p_from_sbm(p_block, list_blocks):
 
 
 
+def er_parameter_from_sbm(sizes, p):
+    """Given parameters of an SBM model returns an ER parameter such that the graphs will have same number of expected edges."""
+    expected_edges = 0.0
+    for i in range(len(sizes)):
+        for j in range(i, len(sizes)):
+            if i == j:
+                expected_edges += (sizes[i] * (sizes[i] - 1) / 2) * p[i][i]
+            else:
+                expected_edges += sizes[i] * sizes[j] * p[i][j]
+    n = sum(sizes)
+    p = (2 * expected_edges) / (n * (n-1))  
+    return p
+
+
 def offset_idx(idx_mat: torch.LongTensor, lens: torch.LongTensor, dim_size: int, indices = [0]):
     """Offset the edge indices according to the number of nodes in the graph to format as a batch
 

@@ -1,7 +1,4 @@
 import argparse
-import shutil
-from pathlib import Path
-
 import torch
 import torch.nn.functional as F
 import yaml
@@ -11,6 +8,7 @@ from module.data import Synthetic
 from torch_geometric.data import DataLoader
 from tqdm import tqdm
 from os.path import join
+import os
 
 def vote(data_path, weight_path, hidden_channels, device, sample_eval, batch_size, vote_path, perturbation, parameter_list):
     """Make prediction of the smoothed models
@@ -18,12 +16,6 @@ def vote(data_path, weight_path, hidden_channels, device, sample_eval, batch_siz
     Args:
         config ([Dic]): Dictionary of configuration
     """
-
-    # Load dataset
-    #l_data_test = torch.load(save_path + "dataset_train")
-    #n_graph = len(l_data_test)
-    #n, nc = l_data_test[0].x.shape[0], config["optimisation"]["n_classes"]
-    #loader_test = DataLoader(l_data_test, batch_size = 1, shuffle = False)
 
     # Load dataset
     dataset = Synthetic(data_path)
@@ -47,9 +39,7 @@ def vote(data_path, weight_path, hidden_channels, device, sample_eval, batch_siz
 
     # Load type of perturbation
     perturbation_function = load_perturbation(noise_type)
-
     model.eval()
-
     votes = torch.zeros((n_graph, nc), dtype=torch.long, device=next(model.parameters()).device)
     ## Todo: Batch size might depend on the parameter (if many edges are created the memory might not be enough)
     for param_noise in tqdm(lp, desc="Loop over the parameter"):
@@ -61,27 +51,28 @@ def vote(data_path, weight_path, hidden_channels, device, sample_eval, batch_siz
             for i, data in tqdm(enumerate(test_loader), desc="Loop over the data"):
 
                 #Get the graph structure and attributes
-                edge_idx = data.edge_index.cuda()
-                x = data.x.cuda()
+                edge_idx = data.edge_index.to(device)
+                x = data.x.to(device)
                 n_graph = x.shape[0]
                 x_batch = x.repeat(batch_size, 1)
                 batch_idx = torch.arange(batch_size, device=edge_idx.device).repeat_interleave(n_graph, dim=0)
                 if noise_type == "community":
-                    community_node = [torch.tensor(el).clone().detach().cuda() for el in data.community_node[0]]
+                    community_node = [torch.tensor(el).clone().detach().to(device) for el in data.community_node[0]]
                     community_size = data.community_size
                     community_prob = data.community_prob
 
                 # Loop over the perturbation graph batches
                 for _ in range(nbatches):
                     if noise_type == "community":
-                        edge_idx_batch = perturbation_function(edge_idx, n, batch_size, param_noise, community_node=community_node, community_size=community_size, community_prob=community_prob)
+                        edge_idx_batch = perturbation_function(edge_idx, n, batch_size, param_noise, community_node=community_node, community_size=community_size, community_prob=community_prob, device=device)
                     else:
-                        edge_idx_batch = perturbation_function(edge_idx, n, batch_size, param_noise)
+                        edge_idx_batch = perturbation_function(edge_idx, n, batch_size, param_noise, device=device)
                     predictions = model(x=x_batch, edge_index=edge_idx_batch, batch=batch_idx).argmax(1)
                     preds_onehot = F.one_hot(predictions.to(torch.int64), int(nc)).sum(0)
                     votes[i] += preds_onehot
 
-    torch.save(votes, path_votes + "votes")
+    os.makedirs(path_votes, exist_ok=True)
+    torch.save(votes.cpu(), join(path_votes, "votes"))
 
 if __name__ == '__main__':
 
@@ -98,7 +89,7 @@ if __name__ == '__main__':
     vote(data_path=data_path,
          weight_path=model_path,
          hidden_channels=config['optimisation']['hidden_channels'],
-         device='cuda:0',
+         device='cuda:1',
          sample_eval=config['certification']['sample_eval'],
          batch_size=config['certification']['batch_size'],
          vote_path=vote_path,

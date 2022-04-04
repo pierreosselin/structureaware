@@ -20,7 +20,7 @@ def load_perturbation(name):
     if name == "community":
         return sample_perturbed_graphs_community
 
-def sample_perturbed_graphs_bernoulli(data_idx, n, batch_size, param_noise, **args):
+def sample_perturbed_graphs_bernoulli(data_idx, n, batch_size, param_noise, device, **kwargs):
     """Sample pertubed graphs according to bernoulli topological noise
 
     Args:
@@ -40,12 +40,12 @@ def sample_perturbed_graphs_bernoulli(data_idx, n, batch_size, param_noise, **ar
     w_existing = torch.ones_like(idx_copies[0])
 
     # Sample edges to delete
-    to_del = torch.cuda.BoolTensor(idx_copies.shape[1]).bernoulli_(param_noise)
+    to_del = torch.BoolTensor(idx_copies.shape[1]).bernoulli_(param_noise).to(device)
     w_existing[to_del] = 0
 
     #To rewrite and test!!!
     nadd_persample_np = np.random.binomial(n * n, param_noise, size=batch_size)  # 6x faster than PyTorch
-    nadd_persample = torch.cuda.FloatTensor(nadd_persample_np)
+    nadd_persample = torch.FloatTensor(nadd_persample_np).to(device)
     nadd_persample_with_repl = torch.round(torch.log(1 - nadd_persample / (n * n))
                                             / np.log(1 - 1 / (n * n))).long()
     nadd_with_repl = nadd_persample_with_repl.sum()
