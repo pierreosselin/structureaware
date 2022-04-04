@@ -1,8 +1,7 @@
-import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GCNConv, global_mean_pool
+from torch_geometric.nn import GCNConv, global_add_pool, global_mean_pool
 
 
 class GCN_Classification(torch.nn.Module):
@@ -15,29 +14,30 @@ class GCN_Classification(torch.nn.Module):
         p_dropout (float): Dropout parameter before last layer
     """
 
-    def __init__(self, n_features, hidden_channels, n_classes = 2, p_dropout=0.5):
+    def __init__(self, num_features, hidden_channels, num_classes = 2, dropout=0.5):
         super(GCN_Classification, self).__init__()
         
-        self.conv1 = GCNConv(n_features, hidden_channels[0])
-        self.conv2 = GCNConv(hidden_channels[0], hidden_channels[1])
-        self.conv3 = GCNConv(hidden_channels[1], hidden_channels[2])
-        self.lin = nn.Linear(hidden_channels[2], n_classes)
-        self.p_dropout = p_dropout
+        if isinstance(hidden_channels, int):
+            hidden_channels = [hidden_channels,]
+        dimensions = [num_features, *hidden_channels, num_classes]
+
+        self.convs = []
+        for f_in, f_out in zip(dimensions[:-2], dimensions[1:-1]):
+            self.convs.append(GCNConv(f_in, f_out))
+        self.convs = nn.ModuleList(self.convs)
+        self.linear = nn.Linear(dimensions[-2], dimensions[-1])
+        self.dropout = dropout
 
     def forward(self, x, edge_index, batch):
         # 1. Obtain node embeddings
-        x = self.conv1(x, edge_index)
-        x = x.relu()
-        x = self.conv2(x, edge_index)
-        x = x.relu()
-        x = self.conv3(x, edge_index)
-        x = x.relu()
-        
+        for conv in self.convs:
+            x = conv(x, edge_index)
+            x = x.relu()
+
         # 2. Readout layer
         x = global_mean_pool(x, batch)  # [batch_size, hidden_channels]
 
         # 3. Apply a final classifier
-        x = F.dropout(x, p=self.p_dropout, training=self.training)
-        x = self.lin(x)
+        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = self.linear(x)
         return x
-
