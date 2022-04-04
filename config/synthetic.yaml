@@ -9,7 +9,7 @@ optimisation:
   max_epochs: 40
   hidden_channels: 32
   batch_size: 32
-certificate:
+certification:
   perturbation: bernoulli
   sample_eval: 1000
   parameter_list: [0.05, 0.1]
