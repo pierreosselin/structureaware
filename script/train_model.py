@@ -3,64 +3,90 @@ import argparse
 import torch
 import yaml
 from module.models import GCN_Classification
-from torch_geometric.data import Data
-from torch_geometric.loader import DataLoader
+from os.path import join
+from module.data import Synthetic
+import os
+import torchmetrics
+import numpy as np
 
-def train_model(max_epochs, lr, hidden_channels, batch_size, save_path, weight_path, device):
+
+
+def train_model(max_epochs, lr, hidden_channels, batch_size, data_path, model_path, device):
 
     # Load data
-    l_data_train = torch.load(save_path + "dataset_train")
-    l_data_test = torch.load(save_path + "dataset_test")
-
-    # Process data such that removing attributes not important for batching
-    l_data_train = [Data(x=el.x, edge_index=el.edge_index, y=el.y).to(device) for el in l_data_train]
-    l_data_test = [Data(x=el.x, edge_index=el.edge_index, y=el.y).to(device) for el in l_data_test]
+    dataset = Synthetic(data_path)
+    dataset.data.to(device)
+    train_loader = dataset.dataloader('train', batch_size)
+    valid_loader = dataset.dataloader('valid', batch_size)
+    test_loader = dataset.dataloader('test', batch_size)
 
     # Instanciate model
-    model = GCN_Classification(n_features=l_data_train[0].x.shape[1], hidden_channels=hidden_channels, n_classes=2).to(device)
-
+    model = GCN_Classification(num_features=dataset.num_features, hidden_channels=hidden_channels, num_classes=dataset.num_classes).to(device)
     optimiser = torch.optim.Adam(model.parameters(), lr=lr)
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss(reduction='none')
 
-    train_loader = DataLoader(l_data_train, batch_size = batch_size)
-    valid_loader = DataLoader(l_data_test, batch_size = batch_size)
-    test_loader = DataLoader(l_data_test, batch_size = batch_size)
+    # early stopping
+    best_model = None
+    best_loss = np.inf
 
+    # training
     for epoch in range(max_epochs):
-        train_epoch(model, train_loader, criterion, optimiser)
-        evaluate(model, valid_loader)
+        train_loss, train_accuracy = train_epoch(model, train_loader, criterion, optimiser)
+        valid_loss, valid_accuracy = evaluate(model, valid_loader, criterion)
+        print(epoch, round(train_loss, 3), round(valid_loss, 3), round(train_accuracy, 2), round(valid_accuracy, 2))
+        if valid_loss < best_loss:
+            best_loss = valid_loss
+            best_model = model.state_dict()
 
+    # test model
+    model.load_state_dict(best_model)
+    test_loss, test_accuracy = evaluate(model, test_loader, criterion)
+    print(f'Test loss: {round(test_loss, 3)}. Test accuracy: {round(test_accuracy, 2)}.')
+
+    # save model
     print("Saving model...")
-    torch.save(model.state_dict(), weight_path + "GCN.pth")
+    os.makedirs(model_path, exist_ok=True)
+    torch.save(model.state_dict(), model_path + "GCN.pth")
 
 
 def train_epoch(model, train_loader, criterion, optimiser):
     model.train()
+    accuracy = torchmetrics.Accuracy()
+    epoch_loss = torchmetrics.MeanMetric()
     for batch in train_loader:  # Iterate in batches over the training dataset.
         out = model(batch.x, batch.edge_index, batch.batch)  # Perform a single forward pass.
         loss = criterion(out, batch.y)  # Compute the loss.
-        loss.backward()  # Derive gradients.
+        loss.mean().backward()  # Derive gradients.
+        epoch_loss.update(loss.detach())
+        accuracy.update(out, batch.y)
         optimiser.step()  # Update parameters based on gradients.
         optimiser.zero_grad()  # Clear gradients.
+    return epoch_loss.compute().item(), accuracy.compute().item()
 
-
-def evaluate(model, loader):
-    model.eval()
-    correct = 0
-    for batch in loader:  # Iterate in batches over the training/test dataset.
-        out = model(batch.x, batch.edge_index, batch.batch)
-        pred = out.argmax(dim=1)  # Use the class with highest probability.
-        correct += int((pred == batch.y).sum())  # Check against ground-truth labels.
-    return correct / len(loader.dataset)  # Derive ratio of correct predictions.
+def evaluate(model, loader, criterion):
+    with torch.no_grad():
+        model.eval()
+        accuracy = torchmetrics.Accuracy()
+        epoch_loss = torchmetrics.MeanMetric()
+        for batch in loader:  # Iterate in batches over the training/test dataset.
+            out = model(batch.x, batch.edge_index, batch.batch)
+            loss = criterion(out, batch.y)
+            epoch_loss.update(loss)
+            accuracy.update(out, batch.y)
+        return epoch_loss.compute().item(), accuracy.compute().item()
 
 
 if __name__ == '__main__':
     # Argument definition
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='default_config')
-    parser.add_argument('--device', type=str, default='cuda:2')
+    parser.add_argument('--config', type=str, default='synthetic')
+    parser.add_argument('--device', type=str, default='cpu')
     args = parser.parse_args()
+
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
     device = args.device
-    train_model(config["optimisation"]["n_epochs"], config["optimisation"]['lr'], config["optimisation"]["hidden_channels"], config["optimisation"]["batch_size"], config["save_path"], config["weight_path"], device)
+    data_path = join('data', config['dataset'])
+    model_path = join('model', config['dataset'])
+
+    train_model(config['optimisation']['max_epochs'], config['optimisation']['lr'], config['optimisation']['hidden_channels'], config['optimisation']['batch_size'], data_path, model_path, device)
 
