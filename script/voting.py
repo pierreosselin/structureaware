@@ -9,6 +9,8 @@ from torch_geometric.data import DataLoader
 from tqdm import tqdm
 from os.path import join
 import os
+import numpy as np
+from module.utils import er_parameter_from_sbm
 
 def vote(data_path, weight_path, hidden_channels, device, sample_eval, batch_size, vote_path, perturbation, parameter_list):
     """Make prediction of the smoothed models
@@ -57,14 +59,24 @@ def vote(data_path, weight_path, hidden_channels, device, sample_eval, batch_siz
                 x_batch = x.repeat(batch_size, 1)
                 batch_idx = torch.arange(batch_size, device=edge_idx.device).repeat_interleave(n_graph, dim=0)
                 if noise_type == "community":
-                    community_node = [torch.tensor(el).clone().detach().to(device) for el in data.community_node[0]]
-                    community_size = data.community_size
-                    community_prob = data.community_prob
+
+                    # TODO: look at these lines and fix them...
+                    if data.y.item() == 1:
+                        node_community = [torch.arange(60)]
+                        community_size = torch.tensor((60,))
+                        community_prob = torch.tensor([[0.1102,]])
+                    else:
+                        node_community = [torch.arange(20), torch.arange(20, 40), torch.arange(40, 60)]
+                        community_size = torch.tensor((20, 20, 20))
+                        community_prob = torch.tensor([[0.2000, 0.0200, 0.0200],
+                                                       [0.0200, 0.3000, 0.0200],
+                                                       [0.0200, 0.0200, 0.4000]])
+
 
                 # Loop over the perturbation graph batches
                 for _ in range(nbatches):
                     if noise_type == "community":
-                        edge_idx_batch = perturbation_function(edge_idx, n, batch_size, param_noise, community_node=community_node, community_size=community_size, community_prob=community_prob, device=device)
+                        edge_idx_batch = perturbation_function(edge_idx, n, batch_size, param_noise, node_community=node_community, community_size=community_size, community_prob=community_prob, device=device)
                     else:
                         edge_idx_batch = perturbation_function(edge_idx, n, batch_size, param_noise, device=device)
                     predictions = model(x=x_batch, edge_index=edge_idx_batch, batch=batch_idx).argmax(1)
@@ -78,7 +90,7 @@ if __name__ == '__main__':
 
     # Argument definition
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='synthetic')
+    parser.add_argument('--config', type=str, default='synthetic_community')
     args = parser.parse_args()
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
 
@@ -89,7 +101,7 @@ if __name__ == '__main__':
     vote(data_path=data_path,
          weight_path=model_path,
          hidden_channels=config['optimisation']['hidden_channels'],
-         device='cuda:1',
+         device='cpu',
          sample_eval=config['certification']['sample_eval'],
          batch_size=config['certification']['batch_size'],
          vote_path=vote_path,
