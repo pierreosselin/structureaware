@@ -34,9 +34,9 @@ def preprocessing(config):
             param_cluster = config["clustering"]["clustering_parameter"]
             digits = config["clustering"]["digits"]
             for datum in tqdm(l_data_train + l_data_test, desc='Applying Clustering to the dataset'):
-                community_prob, node_community, community_node, community_size = process_clustering(datum, param_cluster, digits)
+                community_prob, node_community, node_community, community_size = process_clustering(datum, param_cluster, digits)
                 datum.node_community = torch.tensor(node_community)
-                datum.community_node = community_node
+                datum.node_community = node_community
                 datum.community_size = torch.tensor(community_size)
                 datum.community_prob = torch.tensor(community_prob)
 

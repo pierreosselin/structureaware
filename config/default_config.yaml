@@ -1,6 +1,6 @@
 ## Configuration File
 dataset: synthetic
-save_path: data/synthetic/
+save_path: data/syntheti
 override_save: true
 weight_path: data/synthetic/pretrained_models/
 override_weight: true

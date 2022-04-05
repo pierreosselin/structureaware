@@ -72,7 +72,7 @@ def process_clustering(gr, param, digits):
     Returns:
         community_prob (2D Array): Array of inter and intra community probabilities
         node_community (1D Array): Array of node assignment to commumities
-        community_node ([1D Array]): List of nodes assigned to each community
+        node_community ([1D Array]): List of nodes assigned to each community
         community_size (1D Array): Size of each community
     """
     # Detect if undirected or not
@@ -91,14 +91,14 @@ def process_clustering(gr, param, digits):
     node_community = clusters.membership
     communities, community_size = np.unique(node_community, return_counts=True)
     n_communities = communities.shape[0]
-    community_node = [[] for _ in range(n_communities)]
+    node_community = [[] for _ in range(n_communities)]
 
-    ## Compute community_node
+    ## Compute node_community
     for i, el in enumerate(node_community):
-        community_node[el].append(i)
+        node_community[el].append(i)
 
     ###### Community probabilities
     community_prob = compute_probabilities(n_communities, gr, node_community, community_size)
     community_prob = approximate_probabilities(community_prob, n_communities, digits)
 
-    return community_prob, node_community, community_node, community_size
+    return community_prob, node_community, node_community, community_size

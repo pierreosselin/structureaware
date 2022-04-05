@@ -7,7 +7,7 @@ import os.path
 from tqdm import tqdm
 from torch_geometric.data import Data
 from torch_geometric.datasets import TUDataset
-from module.utils import compute_p_from_sbm
+from .utils import compute_p_from_sbm
 
 def generate_data(name_dataset, n_data=None, list_blocks=None, p=None, er_param=None, save_path=None, prop_train_test=None):
     """Generate desired dataset and split it in train/test dataset
@@ -65,7 +65,7 @@ def generate_SBMS(n_data, list_blocks, p):
         ### Compute clustering
         data.node_community = torch.tensor(sum([[i for _ in range(el)] for i, el in enumerate(list_blocks)], []))
         cumsum_list_blocks = [0] + list(np.cumsum(list_blocks))
-        data.community_node = [list(range(cumsum_list_blocks[i], cumsum_list_blocks[i+1])) for i in range(len(list_blocks))]
+        data.node_community = [list(range(cumsum_list_blocks[i], cumsum_list_blocks[i+1])) for i in range(len(list_blocks))]
         data.community_size = torch.tensor(list_blocks)
         data.community_prob = torch.tensor(p)
 
@@ -114,7 +114,7 @@ def generate_ER(n_data, list_blocks, p, er_param=None):
         
         ### Compute clusters
         data.node_community = torch.tensor([0 for _ in range(n_graph)])
-        data.community_node = [list(range(n_graph))]
+        data.node_community = [list(range(n_graph))]
         data.community_size = torch.tensor([n_graph])
         data.community_prob = torch.tensor([[er_p]])
         l_data.append(data)

@@ -34,13 +34,13 @@ def test_pertubation_community():
 
         node_community = torch.tensor(sum([[i for _ in range(el)] for i, el in enumerate(list_blocks)], []))
         cumsum_list_blocks = [0] + list(np.cumsum(list_blocks))
-        community_node = torch.tensor([list(range(cumsum_list_blocks[i], cumsum_list_blocks[i+1])) for i in range(len(list_blocks))])
+        node_community = torch.tensor([list(range(cumsum_list_blocks[i], cumsum_list_blocks[i+1])) for i in range(len(list_blocks))])
         community_size = torch.tensor(list_blocks)
         community_prob = torch.tensor(block_probs)
 
         n, batch_size, param_noise = 15, 2000, 2.
         count_matrix = np.zeros((15,15))
-        perturbed_graph = sample_perturbed_graphs_community(data_idx, n, batch_size, param_noise, community_node, community_size, community_prob)
+        perturbed_graph = sample_perturbed_graphs_community(data_idx, n, batch_size, param_noise, node_community, community_size, community_prob)
         for el1, el2 in zip(perturbed_graph[0], perturbed_graph[1]):
                 count_matrix[el1 % 15, el2 % 15] += 1
         count_matrix /= batch_size

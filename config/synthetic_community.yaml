@@ -10,7 +10,7 @@ optimisation:
   hidden_channels: 32
   batch_size: 32
 certification:
-  perturbation: bernoulli
+  perturbation: community
   sample_eval: 1000
   parameter_list: [0.1]
   batch_size: 200
