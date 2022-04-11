@@ -2,9 +2,9 @@ import argparse
 
 import torch
 import yaml
-from module.models import GCN_Classification
+from communityaware.models import GCN_Classification
 from os.path import join
-from module.data import Synthetic
+from communityaware.data import Synthetic
 import os
 import torchmetrics
 import numpy as np

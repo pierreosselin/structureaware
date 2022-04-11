@@ -2,15 +2,15 @@ import argparse
 import torch
 import torch.nn.functional as F
 import yaml
-from module.models import GCN_Classification
-from module.perturb import load_perturbation
-from module.data import Synthetic
+from communityaware.models import GCN_Classification
+from communityaware.perturb import load_perturbation
+from communityaware.data import Synthetic
 from torch_geometric.data import DataLoader
 from tqdm import tqdm
 from os.path import join
 import os
 import numpy as np
-from module.utils import er_parameter_from_sbm
+from communityaware.utils import er_parameter_from_sbm
 
 def vote(data_path, weight_path, hidden_channels, device, sample_eval, batch_size, vote_path, perturbation, parameter_list):
     """Make prediction of the smoothed models
@@ -98,12 +98,12 @@ if __name__ == '__main__':
     model_path = join('output', config['dataset'], 'weights')
     vote_path = join('output', config['dataset'], 'votes')
 
-    vote(data_path=data_path,
-         weight_path=model_path,
-         hidden_channels=config['optimisation']['hidden_channels'],
-         device='cpu',
-         sample_eval=config['certification']['sample_eval'],
-         batch_size=config['certification']['batch_size'],
-         vote_path=vote_path,
-         perturbation=config["certification"]["perturbation"],
-         parameter_list=config["certification"]["parameter_list"])
+    #vote(data_path=data_path,
+    #     weight_path=model_path,
+    #     hidden_channels=config['optimisation']['hidden_channels'],
+    #     device='cpu',
+    #     sample_eval=config['certification']['sample_eval'],
+    #     batch_size=config['certification']['batch_size'],
+    #     vote_path=vote_path,
+    #     perturbation=config["certification"]["perturbation"],
+    #     parameter_list=config["certification"]["parameter_list"])

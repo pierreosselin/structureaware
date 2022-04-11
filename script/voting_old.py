@@ -2,15 +2,15 @@ import argparse
 import torch
 import torch.nn.functional as F
 import yaml
-from module.models import GCN_Classification
-from module.perturb import load_perturbation
-from module.data import Synthetic
+from communityaware.models import GCN_Classification
+from communityaware.perturb import load_perturbation
+from communityaware.data import Synthetic
 from torch_geometric.data import DataLoader
 from tqdm import tqdm
 from os.path import join
 import os
 import numpy as np
-from module.utils import er_parameter_from_sbm
+from communityaware.utils import er_parameter_from_sbm
 
 def vote(data_path, weight_path, hidden_channels, device, sample_eval, batch_size, vote_path, perturbation, parameter_list):
     """Make prediction of the smoothed models

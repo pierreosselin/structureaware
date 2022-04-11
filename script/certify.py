@@ -1,7 +1,7 @@
 import argparse
 import torch
 import yaml
-from module.cert.bernoulli import max_bernoulli_radius
+from communityaware.cert.bernoulli import max_bernoulli_radius
 from statsmodels.stats.proportion import proportion_confint
 from os.path import join
 import numpy as np

@@ -1,7 +1,7 @@
 import argparse
 import torch
 import yaml
-from module.cert.community import inner_outer_certificate
+from communityaware.cert.community import inner_outer_certificate
 from statsmodels.stats.proportion import proportion_confint
 from os.path import join
 import numpy as np

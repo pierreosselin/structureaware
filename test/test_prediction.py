@@ -1,4 +1,4 @@
-from module.prediction import sample_perturbed_graphs_bernoulli, sample_perturbed_graphs_community
+from communityaware.prediction import sample_perturbed_graphs_bernoulli, sample_perturbed_graphs_community
 import numpy as np
 import torch
 import networkx as nx

@@ -6,8 +6,8 @@ from pathlib import Path
 
 import torch
 import yaml
-from module.clustering import process_clustering
-from module.generate_data import generate_data
+from communityaware.clustering import process_clustering
+from communityaware.generate_data import generate_data
 from tqdm import tqdm
 
 

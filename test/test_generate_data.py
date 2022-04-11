@@ -3,7 +3,7 @@
 Test for:
 - get a dataset already processed
 """
-from module.generate_data import generate_ER, generate_SBMS, generate_synthetic
+from communityaware.generate_data import generate_ER, generate_SBMS, generate_synthetic
 import numpy as np
 from torch_geometric.utils import is_undirected
 import pytest

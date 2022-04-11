@@ -1,4 +1,4 @@
-from module.utils import compute_p_from_sbm
+from communityaware.utils import compute_p_from_sbm
 import numpy as np
 import pytest
 

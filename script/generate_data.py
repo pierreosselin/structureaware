@@ -1,7 +1,7 @@
 import argparse
 import yaml
-from module.generate_data import generate_synthetic_data
-from module.utils import er_parameter_from_sbm
+from communityaware.generate_data import generate_synthetic_data
+from communityaware.utils import er_parameter_from_sbm
 from os.path import join
 
 if __name__ == '__main__':

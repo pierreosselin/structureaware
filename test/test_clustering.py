@@ -1,4 +1,4 @@
-from module.clustering import compute_probabilities, approximate_probabilities, apply_clustering
+from communityaware.clustering import compute_probabilities, approximate_probabilities, apply_clustering
 import numpy as np
 import torch
 import pytest
