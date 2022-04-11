@@ -15,9 +15,11 @@ def generate_synthetic_data(graphs_per_class, sbm_community_sizes, sbm_parameter
     # generate dataset
     progress_bar = tqdm(desc='Generating synthetic data', total=2*graphs_per_class)
     data_list = []
-    for _ in range(graphs_per_class):
+    for i in range(graphs_per_class):
         data_list.append(SBM(sbm_community_sizes, sbm_parameters))
+        data_list[-1].idx = 2*i
         data_list.append(ER(er_nodes, er_parameter))
+        data_list[-1].idx = 2*i+1
         progress_bar.update(2)
     
     # split dataset
@@ -45,17 +47,18 @@ def SBM(sizes, p):
     assign_synthetic_features(graph)
     return graph
 
-def assign_synthetic_features(graph, feature='katz'):
+def assign_synthetic_features(graph, feature='PE'):
     if feature=='ones':
         graph.x = torch.ones(graph.num_nodes, 1)
     elif feature=='katz':
         graph_nx = to_networkx(graph)
         graph.x = torch.FloatTensor([nx.katz_centrality_numpy(graph_nx)[i] for i in range(graph_nx.number_of_nodes())]).unsqueeze(1)
     elif feature=='PE':
-        _, vecs = sp.linalg.eigsh(to_scipy_sparse_matrix(graph.edge_index))
+        _, vecs = sp.linalg.eigsh(to_scipy_sparse_matrix(graph.edge_index, num_nodes=graph.num_nodes))
         graph.x = torch.FloatTensor(vecs)
     else:
         raise ValueError('feature should be one of: "ones", "katz" or "PE".')
+    assert graph.num_nodes == graph.x.shape[0]
 
 def split_data(y, train_size, val_size, test_size):
     idx = np.arange(len(y))
