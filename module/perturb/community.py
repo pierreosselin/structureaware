@@ -1,74 +1,46 @@
-import torch
+import jax
+import jax.numpy as jnp
+from functools import partial
+import torch_geometric
+from torch_geometric.utils import to_dense_adj, from_scipy_sparse_matrix
 import numpy as np
-from torch_sparse import coalesce
-from ..utils import copy_idx, offset_idx
+import scipy.sparse as sp
 
-def sample_perturbed_graphs_community(data_idx, n, batch_size, param_noise, node_community, community_size, community_prob, device):
-    """Sample pertubed graphs according to community topological noise
+def sample_perturbed_graphs_with_sbm_noise(graph: torch_geometric.data.data.Data, sizes: tuple, p: np.ndarray, repeats: int):
+    key = jax.random.PRNGKey(graph.idx.item())
+    keys = jax.random.split(key, repeats)
+    adjacency = jnp.array(to_dense_adj(graph.edge_index, max_num_nodes=graph.num_nodes), dtype=bool).squeeze()
+    sizes_cumsum = (0, ) + tuple(np.cumsum(sizes))
+    p = jnp.array(p)
+    perturbed_adjacencies = stochastic_block_model_noise(adjacency, sizes, sizes_cumsum, p, keys)
+    graphs = [from_scipy_sparse_matrix(sp.csr_matrix(a)) for a in np.array(perturbed_adjacencies)]
+    return graphs
+
+
+@partial(jax.jit, static_argnums=(1,2))
+@partial(jax.vmap, in_axes=(None, None, None, None, 0), out_axes=0)
+def stochastic_block_model_noise(adjacency: jnp.DeviceArray, sizes: tuple, sizes_cumsum: tuple, p: jnp.DeviceArray, key: jnp.DeviceArray) -> jnp.DeviceArray:
+    """Applies stochastic block model noise to the adjacency matrix.
 
     Args:
-        data_idx ([2, n_edges] array): Array of the graph edges
-        n (int): Number of nodes in the graph
-        batch_size (int): Batch size for the number of graph to sample
-        param_noise (float): Coefficient of proportionality for the probability matrix
-        node_community (array):  Array representing the list of nodes in each community
-        community_size ([int]): List of community sizes
-        community_prob (array): Probability of inter and intra clustering
+        adjacency (jnp.DeviceArray): (repeats, num_nodes, num_nodes) adjacency matrix.
+        sizes (tuple): (num_communities) size of each community. E.g. (20, 20, 20).
+        sizes_cumsum (tuple): (num_communities+1) cumalative sum of sizes (with 0 at the beginning). e.g. (0, 20, 40, 60).
+        p (jnp.DeviceArray): (num_communities, num_communities) probability of inter- and intra-community edges.
+        key (jnp.DeviceArray): (repeats, 2) a key for the random number generator (one per sample). Can be generated using `jax.random.split(key, repeats)`.
 
     Returns:
-        array: Batch of sampled graph according to the noise distribution
+        jnp.DeviceArray: (repeats, num_nodes, num_nodes) perturbed adjacency matrices.
     """
-    p_communities = param_noise*community_prob
-    n_Clusters = community_size.shape[0]
-    data_idx = data_idx[:, data_idx[0] < data_idx[1]]
-    idx_copies = copy_idx(data_idx, n, batch_size)
-
-    ## Next step: populate a tensor of size number of successes, populate random number size of the corresponding cluster and assign node through mapping
-    to_add_total = torch.empty(2, 0).long().to(device)
-
-    # Half the loops are useless here, and not parallelized
-    for c1 in range(n_Clusters):
-        for c2 in range(n_Clusters):
-            nadd_persample_np = np.random.binomial(community_size[c1] * community_size[c2], p_communities[c1, c2], size=batch_size)  # 6x faster than PyTorch
-            nadd_persample = torch.FloatTensor(nadd_persample_np).to(device)
-            val = torch.log(1 - nadd_persample / (community_size[c1] * community_size[c2])) / np.log(1 - 1 / (community_size[c1] * community_size[c2]))
-            if torch.isinf(val.sum()):
-                t = torch.isinf(val).nonzero()
-                val[t] = community_size[c1] * community_size[c2] * torch.ones_like(t).float()
-                nadd_persample_with_repl = torch.round(val).long()
-                nadd_with_repl = nadd_persample_with_repl.sum()
-                to_add = data_idx.new_empty([2, nadd_with_repl])
-                to_add[0].random_(community_size[c1] * community_size[c2])
-
-                edges_indexing = torch.cumsum(nadd_persample_with_repl, dim=0)
-                edges_indexing = torch.cat((torch.tensor([0], device=data_idx.device), edges_indexing), dim = 0)
-                for el in t:
-                    to_add[0][edges_indexing[el]:edges_indexing[el+1]] = torch.arange(community_size[c1] * community_size[c2], device=data_idx.device)
-            else:
-                nadd_persample_with_repl = torch.round(val).long()
-                nadd_with_repl = nadd_persample_with_repl.sum()
-                to_add = data_idx.new_empty([2, nadd_with_repl])
-                to_add[0].random_(community_size[c1] * community_size[c2])
-            to_add[1] = to_add[0] // community_size[c1]
-            to_add[0] = to_add[0] % community_size[c1]
-            to_add[0] = node_community[c1][to_add[0]]
-            to_add[1] = node_community[c2][to_add[1]]
-            to_add = offset_idx(to_add, nadd_persample_with_repl, n, [0, 1])
-
-            to_add = to_add[:, to_add[0] < to_add[1]]
-            to_add_total = torch.cat((to_add_total, to_add), dim = 1)
-    
-    mb = batch_size * n
-    
-    # We need 2 coalesce, one to filter out the duplicates and another one for the addition modulo 2
-    to_add_total, _ = coalesce(to_add_total, torch.ones_like(to_add_total[0]).long(),
-                               batch_size * n, mb, 'min')
-
-    to_add_total = torch.cat((to_add_total, idx_copies), dim = 1)
-    to_add_total, weights = coalesce(to_add_total, torch.ones_like(to_add_total[0]),
-                               batch_size * n, mb)
-
-    per_data_idx = to_add_total[:, weights == 1]
-    per_data_idx = torch.cat((per_data_idx, per_data_idx[[1, 0]]), 1)
-
-    return per_data_idx
+    noise = jnp.zeros_like(adjacency, dtype=bool)
+    for i in range(len(sizes)):
+        for j in range(i, len(sizes)):
+            row_idx_range = sizes_cumsum[i], sizes_cumsum[i+1]
+            col_idx_range = sizes_cumsum[j], sizes_cumsum[j+1]
+            entries=jax.random.bernoulli(key, p[i, j], (sizes[i], sizes[j]))
+            if i == j:
+                entries = entries.at[jnp.tril_indices(sizes[i])].set(0)
+            noise = noise.at[row_idx_range[0]:row_idx_range[1], col_idx_range[0]:col_idx_range[1]].set(entries)
+    noise = noise + noise.T
+    adjacency = jnp.logical_xor(adjacency, noise) 
+    return adjacency
