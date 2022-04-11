@@ -1,4 +1,5 @@
 import torch
+import os
 
 def compute_p_from_sbm(p_block, list_blocks):
     """Find the equivalent parameter p from the Erdos-Renyi model that matches the average number of edges from the given SBM graph
@@ -72,3 +73,7 @@ def copy_idx(idx: torch.LongTensor, dim_size: int, ncopies: int):
     idx_copies += offset[None, :]
 
     return idx_copies
+
+def mask_other_gpus(gpu_number):
+    """Mask all other GPUs than the one specified."""
+    os.environ["CUDA_VISIBLE_DEVICES"]=str(gpu_number)
