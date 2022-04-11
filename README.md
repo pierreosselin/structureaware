@@ -12,10 +12,15 @@ Steps 1 and 2 are agnostic of the certificate. Steps 3/4 require the same certif
 
 ## TODO
 
-- [ ] Work out how voting works when using community (see cert/temp/communityaware)
+Code
+- [x] Work out how voting works when using community (see cert/temp/communityaware)
+- [ ] Refactor voting so its simpler 
 - [ ] Get certificates for synthetic example and plot like in the Gunnemann paper 
 - [ ] Merge generate_data.py and data.py so download generates the data. Use torch_lightning seed everywhere. Save data generating parameters in raw and check in download if theyve changed?
-- [ ] Perturb.py can be split into Bernoulli and community
-- [ ] Understand how the Gunnemann code works (including the correction and batching). Try a JAX perturb vs Gunnemann implementation for Bernoulli
-- [ ] Add argparseconfig support 
+- [x] Perturb.py can be split into Bernoulli and community
+- [x] Understand how the Gunnemann code works (including the correction and batching). Try a JAX perturb vs Gunnemann implementation for Bernoulli
+- [ ] Add argparseconfig support and print args for scripts
+- [ ] Seperate configs into data/training and voting/certification
 
+Theory
+- [ ] Is there a nicer way to make framework more general and reduce compute? 
