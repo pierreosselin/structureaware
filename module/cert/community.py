@@ -3,6 +3,30 @@ from itertools import product
 from scipy.stats import binom
 import gmpy2
 
+
+def inner_outer_certificate(inner: int, outer: int, P: np.ndarray, p_A: float, precision: int=1000):
+    """Certifies inner edge flips within communities and outer edge flips between communities"""
+    number_of_communities = P.shape[0]
+    inside_partitions = partition(inner, number_of_communities)
+    outside_partitions = partition(outer, triangle_number(number_of_communities-1))
+    for (inner_partition, outer_partion) in product(inside_partitions, outside_partitions):
+        R = np.zeros_like(P, dtype=np.int32)
+        R[np.triu_indices(R.shape[0], 1)] = outer_partion # put outer_partition in top triangle
+        R = R + R.T # put outer_partition in lower triangle
+        np.fill_diagonal(R, inner_partition) # put inner_partition on diag
+        lower_bound = compute_communities(R, P, p_A, precision)
+        if lower_bound <= 0.5:
+            return False
+    return True
+
+def triangle_number(n):
+    return int((n*(n+1))/2)
+
+
+def partition(total: int, k: int):
+    """Return list of all tuples of length k with non-negative integers that sum to total"""
+    return list(filter(lambda x: sum(x)==total, product(*[range(total+1) for _ in range(k)])))
+
 def compute_communities(R: np.ndarray, P: np.ndarray, p_A: float, precision: int=1000):
     """
     TODO: write tests <- isotropic if P is always the same... 
@@ -33,7 +57,7 @@ def compute_communities(R: np.ndarray, P: np.ndarray, p_A: float, precision: int
     
     # extra upper triangle of R and P and flatten into a vector
     R = R[np.triu_indices(R.shape[0])]
-    P = P[np.triu_indices(P.shape[0])] 
+    P = P[np.triu_indices(P.shape[0])]
     
     with gmpy2.context(precision=precision):
         sol = np.zeros((np.prod(R+1) , 2)) # first column is c_k, second is P(phi(X) belonging to region)
@@ -47,3 +71,4 @@ def compute_communities(R: np.ndarray, P: np.ndarray, p_A: float, precision: int
         lower_bound = np.sum(sol[:final_region, 1] / sol[:final_region, 0]) # p(Y) in corresponding region
 
     return lower_bound
+
