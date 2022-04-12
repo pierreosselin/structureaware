@@ -17,10 +17,13 @@ def generate_synthetic_data(graphs_per_class, sbm_community_sizes, sbm_parameter
     data_list = []
     for i in range(graphs_per_class):
         data_list.append(SBM(sbm_community_sizes, sbm_parameters))
-        data_list[-1].idx = 2*i
+        data_list[-1].idx = i
+        progress_bar.update(1)
+
+    for i in range(graphs_per_class, 2*graphs_per_class):
         data_list.append(ER(er_nodes, er_parameter))
-        data_list[-1].idx = 2*i+1
-        progress_bar.update(2)
+        data_list[-1].idx = i
+        progress_bar.update(1)
     
     # split dataset
     y = np.array([data.y.item() for data in data_list])
@@ -37,6 +40,7 @@ def ER(n, p):
     graph.node_community = torch.zeros((graph.num_nodes))
     graph.y = torch.LongTensor((1,))
     assign_synthetic_features(graph)
+    graph.sizes = (n,)
     return graph
 
 def SBM(sizes, p):
@@ -45,6 +49,7 @@ def SBM(sizes, p):
     del graph.block
     graph.y = torch.LongTensor((0,))
     assign_synthetic_features(graph)
+    graph.sizes = tuple(sizes)
     return graph
 
 def assign_synthetic_features(graph, feature='PE'):

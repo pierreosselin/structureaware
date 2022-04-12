@@ -1,7 +1,8 @@
+from .utils import triangle_number, partition
 import numpy as np
-from itertools import product
-from scipy.stats import binom
 import gmpy2
+from scipy.stats import binom
+from itertools import product
 
 
 def inner_outer_certificate(inner: int, outer: int, P: np.ndarray, p_A: float, precision: int=1000):
@@ -19,19 +20,10 @@ def inner_outer_certificate(inner: int, outer: int, P: np.ndarray, p_A: float, p
             return False
     return True
 
-def triangle_number(n):
-    return int((n*(n+1))/2)
 
-
-def partition(total: int, k: int):
-    """Return list of all tuples of length k with non-negative integers that sum to total"""
-    return list(filter(lambda x: sum(x)==total, product(*[range(total+1) for _ in range(k)])))
 
 def compute_communities(R: np.ndarray, P: np.ndarray, p_A: float, precision: int=1000):
     """
-    TODO: write tests <- isotropic if P is always the same... 
-    TODO: do forward and backward with a heap
-
     Args:
         R (np.ndarray): R_ij is the max number of flips between C_i and C_j
         P (np.ndarray): P_ij is the probability of flipping an edge between C_i and C_j
