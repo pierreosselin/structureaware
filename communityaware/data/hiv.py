@@ -9,17 +9,20 @@ import pickle
 import torchdrug
 from tqdm import tqdm 
 from rdkit.Chem import AtomValenceException
+from .utils import split_data, assign_graph_ids
 
 class HIV(InMemoryDataset):
 
-    def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
+    def __init__(self, root, split_proportions=(0.8, 0.1, 0.1), transform=None, pre_transform=None, pre_filter=None):
+        self.root = root
+        self.split_proportions = split_proportions
         super().__init__(root, transform, pre_transform, pre_filter)
-        self.data, self.slices = torch.load(self.processed_paths[0])
+        self.data, self.slices, self.split = torch.load(self.processed_paths[0])
         
     def download(self):
         with warnings.catch_warnings(): # torch drug throws warnings about not recognising some atom types.
             warnings.simplefilter("ignore")
-            dataset = datasets.HIV(self.root)
+            dataset = datasets.HIV(self.raw_dir[0])
         torch.save(dataset, self.raw_paths[0])
 
     @property
@@ -56,8 +59,11 @@ class HIV(InMemoryDataset):
         if self.pre_transform is not None:
              data_list = [self.pre_transform(data) for data in data_list]
     
+        assign_graph_ids(data_list)
         self.data, self.slices = self.collate(data_list)
-        torch.save((self.data, self.slices), self.processed_paths[0])
+        self.split = split_data(self.data.y, *self.split_proportions)
+
+        torch.save((self.data, self.slices, self.split), self.processed_paths[0])
 
     def dataloader(self, split, batch_size=32):
         return DataLoader([self[i] for i in self.split[split]], batch_size=batch_size)
