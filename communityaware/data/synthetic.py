@@ -14,6 +14,19 @@ from .utils import split_data, assign_graph_ids
 class Synthetic(InMemoryDataset):
 
     def __init__(self, root, graphs_per_class=300, sbm_community_sizes=(20, 20, 20), sbm_parameters=(0.2, 0.02), er_parameter=0.2, split_proportions=(0.8, 0.1, 0.1), transform=None, pre_transform=None, pre_filter=None):
+        """_summary_
+
+        Args:
+            root (_type_): _description_
+            graphs_per_class (int, optional): _description_. Defaults to 300.
+            sbm_community_sizes (tuple, optional): _description_. Defaults to (20, 20, 20).
+            sbm_parameters (tuple, optional): (p_inner, p_outer). Defaults to (0.2, 0.02).
+            er_parameter (float, optional): _description_. Defaults to 0.2.
+            split_proportions (tuple, optional): _description_. Defaults to (0.8, 0.1, 0.1).
+            transform (_type_, optional): _description_. Defaults to None.
+            pre_transform (_type_, optional): _description_. Defaults to None.
+            pre_filter (_type_, optional): _description_. Defaults to None.
+        """
         self.root = root
         self.graphs_per_class = graphs_per_class
         self.sbm_community_sizes = sbm_community_sizes
@@ -26,8 +39,8 @@ class Synthetic(InMemoryDataset):
     def download(self):
         # convert (p_inner, p_outer) to format that networkx sbm takes
         number_of_communities = len(self.sbm_community_sizes)
-        nx_p = np.ones((number_of_communities, number_of_communities)) * self.sbm_parameters[0]
-        np.fill_diagonal(nx_p, self.sbm_parameters[1])
+        nx_p = np.ones((number_of_communities, number_of_communities)) * self.sbm_parameters[1]
+        np.fill_diagonal(nx_p, self.sbm_parameters[0])
 
         # generate graphs
         progress_bar = tqdm(desc='Generating synthetic data', total=2*self.graphs_per_class)
@@ -73,6 +86,17 @@ class Synthetic(InMemoryDataset):
 
     def dataloader(self, split, batch_size=32):
         return DataLoader([self[i] for i in self.split[split]], batch_size=batch_size)
+    
+    def make_noise_matrix(self, graph):
+        if graph.y.item() == 1:
+            noise = self.er_parameter * np.ones((graph.sizes[0], graph.sizes[0]))
+        else:
+            noise = self.sbm_parameters[1] * np.ones((graph.sizes[0], graph.sizes[0]))
+            sizes_cumsum = np.cumsum(graph.sizes)
+            for i in range(len(graph.sizes)):
+                noise[sizes_cumsum[i]:sizes_cumsum[i+1], sizes_cumsum[i]:sizes_cumsum[i+1]] = self.sbm_parameters[0]
+        return noise 
+
 
 def ER(n, p):
     graph = from_networkx(nx.erdos_renyi_graph(n, p))
