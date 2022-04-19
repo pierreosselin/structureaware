@@ -16,7 +16,7 @@ import numpy as np
 class HIV(InMemoryDataset):
 
     def __init__(self, root: str, split_proportions: Tuple[float]=(0.8, 0.1, 0.1), min_required_edge_flips: int=0, transform: Callable=None, pre_transform: Callable=None, pre_filter: Callable=None):
-        """HIV Dataset.
+        """HIV Dataset. Uses subsampling to balance the dataset.
 
         Args:
             root (str): Root directory where the dataset should be saved.
@@ -80,6 +80,12 @@ class HIV(InMemoryDataset):
 
         # filter graphs with too few potential edge flips
         data_list = [graph for graph in data_list if enough_potential_edge_flips(graph, self.min_required_edge_flips)]
+
+        # subsample data
+        labels = np.array([graph.y.item() for graph in data_list])
+        number_of_positive = np.sum(labels==1)
+        negative_idx = np.random.choice(np.where(labels==0)[0], number_of_positive, replace=False)
+        data_list = [graph for i, graph in enumerate(data_list) if i in negative_idx or graph.y.item()==1]
     
         # split data into train, val, test and assign unique ids.
         assign_graph_ids(data_list)    
