@@ -10,6 +10,7 @@ from rdkit.Chem import AtomValenceException
 from communityaware.data.utils import split_data, assign_graph_ids
 from communityaware.cert.utils import triangle_number
 from typing import Tuple, Callable
+import numpy as np
 
 
 class HIV(InMemoryDataset):
@@ -89,6 +90,22 @@ class HIV(InMemoryDataset):
 
     def dataloader(self, split, batch_size=32):
         return DataLoader([self[i] for i in self.split[split]], batch_size=batch_size)
+
+    def make_noise_matrix(self, graph, p_inner, p_outer):
+        """_summary_
+
+        Args:
+            graph (_type_): _description_
+            p_inner (_type_): Noise parameter for edges in aromatic rings. 
+            p_outer (_type_): Noise parameter for edges not in aromatic rings. 
+
+        Returns:
+            _type_: _description_
+        """
+        noise = np.ones((graph.num_nodes, graph.num_nodes)) * p_outer
+        mask = np.array(np.outer(graph.aromatic_nodes.numpy(), graph.aromatic_nodes.numpy()), dtype=bool)
+        noise[mask] = p_inner
+        return noise 
 
 
 def enough_potential_edge_flips(graph, min_required_edge_flips):

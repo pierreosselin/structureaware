@@ -1,2 +1,2 @@
 from .bernoulli import sample_perturbed_graphs_bernoulli
-from .community import sample_perturbed_graphs_with_sbm_noise
+from .community import batch_perturbed_graph

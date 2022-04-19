@@ -87,14 +87,24 @@ class Synthetic(InMemoryDataset):
     def dataloader(self, split, batch_size=32):
         return DataLoader([self[i] for i in self.split[split]], batch_size=batch_size)
     
-    def make_noise_matrix(self, graph):
+    def make_noise_matrix(self, graph, p_inner, p_outer=None):
+        """_summary_
+
+        Args:
+            graph (_type_): _description_
+            p_inner (_type_): Noise parameter for edges within communites for SBM or for all edges for ER.
+            p_outer (_type_):  Noise parameter for edges between communites for SBM.
+
+        Returns:
+            _type_: _description_
+        """
         if graph.y.item() == 1:
-            noise = self.er_parameter * np.ones((graph.sizes[0], graph.sizes[0]))
+            noise = p_inner * np.ones((graph.sizes[0], graph.sizes[0]))
         else:
-            noise = self.sbm_parameters[1] * np.ones((graph.sizes[0], graph.sizes[0]))
-            sizes_cumsum = np.cumsum(graph.sizes)
+            noise = p_outer * np.ones((sum(graph.sizes), sum(graph.sizes)))
+            sizes_cumsum = np.insert(np.cumsum(graph.sizes), 0, 0)
             for i in range(len(graph.sizes)):
-                noise[sizes_cumsum[i]:sizes_cumsum[i+1], sizes_cumsum[i]:sizes_cumsum[i+1]] = self.sbm_parameters[0]
+                noise[sizes_cumsum[i]:sizes_cumsum[i+1], sizes_cumsum[i]:sizes_cumsum[i+1]] = p_inner
         return noise 
 
 

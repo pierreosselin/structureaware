@@ -1,21 +1,21 @@
 from communityaware.utils import mask_other_gpus
-mask_other_gpus(0)
+mask_other_gpus(1)
 
 import argparse
 import torch
 import torch.nn.functional as F
 import yaml
 from communityaware.models import GCN_Classification
-from communityaware.perturb import sample_perturbed_graphs_with_sbm_noise
+from communityaware.perturb import batch_perturbed_graph
 from communityaware.data import Synthetic
-from torch_geometric.data import DataLoader
 from tqdm import tqdm
 from os.path import join
 import os
 import numpy as np
-from communityaware.utils import er_parameter_from_sbm
 
-def vote(data_path, model_path, votes_path, hidden_channels, sbm_parameters, alphas):
+
+
+def vote(data_path, model_path, votes_path, hidden_channels, alphas, repeats = 10000):
     """_summary_
 
     Args:
@@ -45,10 +45,11 @@ def vote(data_path, model_path, votes_path, hidden_channels, sbm_parameters, alp
             pbar = tqdm(enumerate(test_loader.dataset), leave=False)
             for i, graph in pbar:
                 pbar.set_description(f'Processing graph ({i}/{len(test_loader)}) (perturbing)')
-                sizes = graph.sizes
-                p = alpha * sbm_parameters
-                repeats = 10000
-                perturbed_graphs = sample_perturbed_graphs_with_sbm_noise(graph, sizes, p, repeats)
+                if graph.y.item() == 1:
+                    noise = dataset.make_noise_matrix(graph, alpha)
+                else:
+                    noise = dataset.make_noise_matrix(graph, 0.1, alpha)
+                perturbed_graphs = batch_perturbed_graph(graph, noise, repeats)
                 pbar.set_description(f'Processing graph ({i}/{len(test_loader)}) (predicting)')
                 for batch in perturbed_graphs:
                     predictions = model(batch.x, batch.edge_index, batch.batch).argmax(axis=1)
@@ -56,7 +57,9 @@ def vote(data_path, model_path, votes_path, hidden_channels, sbm_parameters, alp
                 pass
     
         os.makedirs(votes_path, exist_ok=True)
-        torch.save(votes, join(votes_path, str(round(alpha, 8)))) # round is to get rid of floating point errors. E.g. 0.30000000000000004 -> 0.3
+        torch.save(votes, join(votes_path, str(round(alpha, 8)))) # round(, 8) is to get rid of floating point errors. E.g. 0.30000000000000004 -> 0.3
+
+
 
 if __name__ == '__main__':
 
@@ -79,5 +82,4 @@ if __name__ == '__main__':
          model_path=model_path,
          votes_path=votes_path,
          hidden_channels=config['optimisation']['hidden_channels'],
-         sbm_parameters=np.array(config['sbm_parameters']),
          alphas=alphas)
