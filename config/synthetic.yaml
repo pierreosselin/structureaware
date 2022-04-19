@@ -2,15 +2,17 @@
 dataset: synthetic
 graphs_per_class: 300
 community_sizes: [20, 20, 20]
-sbm_parameters: [[0.2, 0.02, 0.02], [0.02, 0.3, 0.02], [0.02, 0.02, 0.4]]
+sbm_parameters: [[0.2, 0.02, 0.02], [0.02, 0.2, 0.02], [0.02, 0.02, 0.2]]
 data_split: [0.7, 0.2, 0.1]
 optimisation:
   lr: 0.01
   max_epochs: 40
-  hidden_channels: 32
+  hidden_channels: [16, 16]
   batch_size: 32
 certification:
-  perturbation: bernoulli
+  perturbation: community
   sample_eval: 1000
-  parameter_list: [0.1]
   batch_size: 200
+  alpha_parameter_min: 0.001
+  alpha_parameter_max: 0.001
+  alpha_parameter_step: 0.1875
