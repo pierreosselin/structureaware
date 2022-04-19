@@ -1,0 +1,15 @@
+## Configuration File
+dataset: hiv
+data_split: [0.7, 0.2, 0.1]
+optimisation:
+  lr: 0.01
+  max_epochs: 40
+  hidden_channels: [16, 16]
+  batch_size: 32
+certification:
+  perturbation: community
+  sample_eval: 1000
+  batch_size: 200
+  alpha_parameter_min: 0.001
+  alpha_parameter_max: 0.001
+  alpha_parameter_step: 0.1875
