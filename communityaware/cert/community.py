@@ -65,7 +65,7 @@ from itertools import product
 #     return lower_bound
 
 def compute_certificate(R: np.ndarray, P: np.ndarray, p_A: float, precision: int=1000):
-    """Compute certificate for communities.
+    """Compute certificate for communities. If lower_bound is above 0.5 then the certificate holds.
 
     Args:
         R (np.ndarray): shape (2,) where entries are budget of intra/outer edge flips

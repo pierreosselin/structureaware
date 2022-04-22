@@ -6,8 +6,6 @@ from communityaware.data import Synthetic
 from statsmodels.stats.proportion import proportion_confint
 from os.path import join
 import numpy as np
-import os
-from tqdm import tqdm
 
 # parse arguments
 parser = argparse.ArgumentParser()
@@ -24,10 +22,9 @@ dataset = Synthetic('data')
 test_set = dataset.dataloader('test', batch_size=1).dataset
 
 # load votes
-noise = 0.001
+noise = 0.01
 alpha = 0.99
 votes = torch.load(join(vote_path, str(round(noise, 8)))).numpy()
-votes = np.ones_like(votes)*500
 p_A = proportion_confint(votes.max(1), votes.sum(1), alpha=2 * alpha, method="beta")[0]
 
 # compute certificate.

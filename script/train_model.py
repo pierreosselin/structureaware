@@ -27,8 +27,8 @@ def train_epoch(model, train_loader, criterion, optimiser):
         out = model(batch.x, batch.edge_index, batch.batch)  # Perform a single forward pass.
         loss = criterion(out, batch.y)  # Compute the loss.
         loss.mean().backward()  # Derive gradients.
-        epoch_loss.update(loss.detach())
-        accuracy.update(out, batch.y)
+        epoch_loss.update(loss.cpu())
+        accuracy.update(out.cpu(), batch.y.cpu())
         optimiser.step()  # Update parameters based on gradients.
         optimiser.zero_grad()  # Clear gradients.
     return epoch_loss.compute().item(), accuracy.compute().item()
@@ -41,8 +41,8 @@ def evaluate(model, loader, criterion):
         for batch in loader:  # Iterate in batches over the training/test dataset.
             out = model(batch.x, batch.edge_index, batch.batch)
             loss = criterion(out, batch.y)
-            epoch_loss.update(loss)
-            accuracy.update(out, batch.y)
+            epoch_loss.update(loss.cpu())
+            accuracy.update(out.cpu(), batch.y.cpu())
         return epoch_loss.compute().item(), accuracy.compute().item()
 
 # load data
@@ -82,6 +82,6 @@ print(f'Test loss: {round(test_loss, 3)}. Test accuracy: {round(test_accuracy, 2
 
 # save model
 print("Saving model...")
-model_path = join('output', config['dataset'])
+model_path = join('output', config['dataset'], 'weights')
 os.makedirs(model_path, exist_ok=True)
-torch.save(model.state_dict(), join(model_path, "weights.pt"))
+torch.save(model.cpu().state_dict(), join(model_path, "weights.pt"))
