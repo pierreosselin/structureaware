@@ -7,9 +7,10 @@ optimisation:
   hidden_channels: [16, 16]
   batch_size: 32
 certification:
-  perturbation: community
   sample_eval: 1000
   batch_size: 200
   alpha_parameter_min: 0.01
   alpha_parameter_max: 0.1
-  alpha_parameter_step: 0.01
+  alpha_parameter_step: 0.02
+  r_max: 7
+  confidence_level: 0.99
