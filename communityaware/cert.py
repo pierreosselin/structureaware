@@ -14,7 +14,6 @@ def compute_certificate(R: np.ndarray, P: np.ndarray, p_A: float):
         R (np.ndarray): shape (2,) where entries are budget of intra/outer edge flips
         P (np.ndarray):  shape (2,) where entries are probability of intra/outer edge flips
         p_A (float): estimated (lower bound) on probability of majority class
-        precision (int, optional): precision for computations. Defaults to 1000.
     """
 
     # check inputs are valid

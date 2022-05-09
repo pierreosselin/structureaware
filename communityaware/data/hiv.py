@@ -1,21 +1,22 @@
-import torch
-from torch_geometric.loader import DataLoader
-from torch_geometric.data import InMemoryDataset, Data
-from os.path import join, isdir
 import warnings
-from torchdrug import datasets 
-import torchdrug
-from tqdm import tqdm 
-from rdkit.Chem import AtomValenceException
-from communityaware.data.utils import split_data, assign_graph_ids
-from communityaware.cert.utils import triangle_number
-from typing import Tuple, Callable
+from os.path import isdir, join
+from typing import Callable, Tuple
+
 import numpy as np
+import torch
+import torchdrug
+from rdkit.Chem import AtomValenceException
+from torch_geometric.data import Data, InMemoryDataset
+from torch_geometric.loader import DataLoader
+from torchdrug import datasets
+from tqdm import tqdm
+
+from communityaware.data.utils import assign_graph_ids, split_data
 
 
 class HIV(InMemoryDataset):
 
-    def __init__(self, root: str, split_proportions: Tuple[float]=(0.8, 0.1, 0.1), min_required_edge_flips: int=0, transform: Callable=None, pre_transform: Callable=None, pre_filter: Callable=None):
+    def __init__(self, root: str, split_proportions: Tuple[float, float, float]=(0.8, 0.1, 0.1), min_required_edge_flips: int=0, transform: Callable=None, pre_transform: Callable=None, pre_filter: Callable=None):
         """HIV Dataset. Uses subsampling to balance the dataset.
 
         Args:
@@ -129,6 +130,8 @@ def enough_potential_edge_flips(graph, min_required_edge_flips):
     potential_edge_flips = triangle_number(min(number_aromatic_nodes, number_non_aromatic_nodes))
     return potential_edge_flips >= min_required_edge_flips
 
+def triangle_number(n):
+    return int((n*(n+1))/2)
 
 def to_torch_geometric(graph: torchdrug.data.molecule.Molecule, label: int):
     """Convert a data sample from a torchdrug dataset to a pytorch dataset with communities membership determined by if nodes are aromatic. 

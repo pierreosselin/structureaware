@@ -8,7 +8,7 @@ import yaml
 from statsmodels.stats.proportion import binom_test, proportion_confint
 from tqdm import tqdm
 
-from communityaware.cert import compute_certificate
+from communityaware.cert import compute_certificate_gmpy as compute_certificate
 from communityaware.data import Synthetic
 
 # parse arguments
@@ -62,7 +62,7 @@ for alpha_pair in tqdm(alpha_pairs, desc="Loop over values of alpha.", total=len
                 if inner + outer == 0.0:
                     certificate_grid[sample_idx, inner_idx, outer_idx] = 1.0 # has already been certifed correct and we know we didnt abstain. 
                 else:
-                    certificate_grid[sample_idx, inner_idx, outer_idx] = compute_certificate(R=np.array((inner, outer)), P=np.array(alpha_pair), p_A=p_A[sample_idx])
+                    certificate_grid[sample_idx, inner_idx, outer_idx] = float(compute_certificate(R=np.array((inner, outer)), P=np.array(alpha_pair), p_A=p_A[sample_idx]))
     
     certificates[alpha_pair] = certificate_grid
 
