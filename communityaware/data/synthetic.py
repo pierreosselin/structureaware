@@ -1,19 +1,21 @@
-import torch
-from torch_geometric.loader import DataLoader
-from torch_geometric.data import InMemoryDataset
 from os.path import join
-from torch_geometric.utils import from_networkx, to_networkx, to_scipy_sparse_matrix
-import scipy.sparse as sp
+
 import networkx as nx
-import torch
 import numpy as np
+import scipy.sparse as sp
+import torch
+from torch_geometric.data import InMemoryDataset
+from torch_geometric.loader import DataLoader
+from torch_geometric.utils import (from_networkx, to_networkx,
+                                   to_scipy_sparse_matrix)
 from tqdm import tqdm
-from .utils import split_data, assign_graph_ids
+
+from .utils import assign_graph_ids, split_data
 
 
 class Synthetic(InMemoryDataset):
 
-    def __init__(self, root, graphs_per_class=300, sbm_community_sizes=(20, 20, 20), sbm_parameters=(0.2, 0.02), er_parameter=0.2, split_proportions=(0.8, 0.1, 0.1), transform=None, pre_transform=None, pre_filter=None):
+    def __init__(self, root, graphs_per_class=1000, size_of_community=20, number_of_communities=3, split_proportions=(0.8, 0.1, 0.1), transform=None, pre_transform=None, pre_filter=None):
         """_summary_
 
         Args:
@@ -29,25 +31,21 @@ class Synthetic(InMemoryDataset):
         """
         self.root = root
         self.graphs_per_class = graphs_per_class
-        self.sbm_community_sizes = sbm_community_sizes
-        self.sbm_parameters = sbm_parameters
-        self.er_parameter = er_parameter
+        self.size_of_community = size_of_community
+        self.number_of_communities = number_of_communities
         self.split_proportions = split_proportions
+        self.number_of_nodes = size_of_community * number_of_communities
         super().__init__(root, transform, pre_transform, pre_filter)
         self.data, self.slices, self.split = torch.load(self.processed_paths[0])
         
     def download(self):
-        # convert (p_inner, p_outer) to format that networkx sbm takes
-        number_of_communities = len(self.sbm_community_sizes)
-        nx_p = np.ones((number_of_communities, number_of_communities)) * self.sbm_parameters[1]
-        np.fill_diagonal(nx_p, self.sbm_parameters[0])
 
         # generate graphs
         progress_bar = tqdm(desc='Generating synthetic data', total=2*self.graphs_per_class)
         data_list = []
         for i in range(self.graphs_per_class):
-            data_list.append(SBM(self.sbm_community_sizes, nx_p))
-            data_list.append(ER(sum(self.sbm_community_sizes), self.er_parameter))
+            data_list.append(SBM(self.number_of_nodes, self.number_of_communities))
+            data_list.append(ER(self.number_of_nodes))
             progress_bar.update(2)
 
         # save
@@ -98,30 +96,63 @@ class Synthetic(InMemoryDataset):
         Returns:
             _type_: _description_
         """
-        if graph.y.item() == 1:
-            noise = p_inner * np.ones((graph.sizes[0], graph.sizes[0]))
+        if graph.y.item() == 0: 
+            noise = p_inner * np.ones((graph.num_nodes, graph.num_nodes))
         else:
-            noise = p_outer * np.ones((sum(graph.sizes), sum(graph.sizes)))
-            sizes_cumsum = np.insert(np.cumsum(graph.sizes), 0, 0)
-            for i in range(len(graph.sizes)):
-                noise[sizes_cumsum[i]:sizes_cumsum[i+1], sizes_cumsum[i]:sizes_cumsum[i+1]] = p_inner
+            community_size = int(graph.num_nodes / graph.number_of_communities)
+            noise = p_outer * np.ones((graph.num_nodes, graph.num_nodes))
+            for i in range(graph.number_of_communities):
+                noise[i * community_size: (i+1) * community_size, i * community_size: (i+1) * community_size] = p_inner
         return noise 
 
 
-def ER(n, p):
-    graph = from_networkx(nx.erdos_renyi_graph(n, p))
-    graph.y = torch.LongTensor((1,))
+def ER(number_of_nodes):
+    graph = from_networkx(connected_critical_er_graph(number_of_nodes))
+    graph.y = torch.LongTensor((0,))
     assign_synthetic_features(graph)
-    graph.sizes = (n,)
+    graph.number_of_communities = 1
     return graph
 
-def SBM(sizes, p):
-    graph = from_networkx(nx.stochastic_block_model(sizes, p))
-    graph.y = torch.LongTensor((0,))
-    del graph.block
-    assign_synthetic_features(graph)
-    graph.sizes = tuple(sizes)
+def connected_critical_er_graph(number_of_nodes):
+    p = np.log(number_of_nodes)/number_of_nodes
+    graph = nx.erdos_renyi_graph(number_of_nodes, p)
+    while not nx.is_connected(graph):
+        graph = nx.erdos_renyi_graph(number_of_nodes, p)
     return graph
+
+def SBM(number_of_nodes, number_of_communities):
+    graph = from_networkx(connected_critical_sbm_graph(number_of_nodes, number_of_communities))
+    del graph.block
+    graph.y = torch.LongTensor((1,))
+    assign_synthetic_features(graph)
+    graph.number_of_communities = number_of_communities
+    return graph
+
+def connected_critical_sbm_graph(n, k, p_in_over_p_out = 10.0):
+    """Graph with n nodes and k communities. n must be divisible by k. p_in_over_p_out is the ratio of p_in (within communities) and p_out (between communities)."""
+    if n % k != 0:
+        raise ValueError("n must be divisible by k.")
+
+    # Calculate critical values of p_in, p_out which respect the p_in_over_p_out parameter.
+    b = k / (p_in_over_p_out + k - 1) 
+    a = k - (k-1) * b
+    p_in = a * np.log(n)/n
+    p_out = b * np.log(n)/n
+
+    # sanity checks
+    assert np.isclose(p_in, p_out * p_in_over_p_out)
+    assert 0 <= p_in <= 1 
+    assert 0 <= p_out <= 1 
+    assert np.isclose(a + (k-1)*b, k)
+
+    # construct graph
+    p = np.ones((k, k)) * p_out
+    np.fill_diagonal(p, p_in)
+    sizes = np.ones(k, dtype=int) * int(n/k)
+    g = nx.stochastic_block_model(sizes, p)
+    while not nx.is_connected(g):
+        g = nx.stochastic_block_model(sizes, p)
+    return g
 
 def assign_synthetic_features(graph, feature='PE'):
     if feature=='ones':
