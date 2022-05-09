@@ -1,13 +1,15 @@
 import argparse
+from itertools import product
+from os.path import join
+
+import numpy as np
 import torch
 import yaml
-from communityaware.cert.community import compute_certificate
-from communityaware.data import Synthetic
-from statsmodels.stats.proportion import proportion_confint, binom_test
-from os.path import join
-import numpy as np
+from statsmodels.stats.proportion import binom_test, proportion_confint
 from tqdm import tqdm
-from itertools import product
+
+from communityaware.cert import compute_certificate
+from communityaware.data import Synthetic
 
 # parse arguments
 parser = argparse.ArgumentParser()
