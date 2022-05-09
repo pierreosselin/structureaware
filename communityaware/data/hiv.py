@@ -114,6 +114,10 @@ class HIV(InMemoryDataset):
         noise[mask] = p_inner
         return noise 
 
+    @property
+    def testset_length(self):
+        return len(self.dataloader('test', batch_size=1))
+
 
 def enough_potential_edge_flips(graph, min_required_edge_flips):
     """Given the graph and min_required_edge_flips will return True if `min_required_edge_flips` can be flipped between aromatic nodes and non-aromatic nodes.

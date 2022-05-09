@@ -105,6 +105,10 @@ class Synthetic(InMemoryDataset):
                 noise[i * community_size: (i+1) * community_size, i * community_size: (i+1) * community_size] = p_inner
         return noise 
 
+    @property
+    def testset_length(self):
+        return len(self.dataloader('test', batch_size=1))
+
 
 def ER(number_of_nodes):
     graph = from_networkx(connected_critical_er_graph(number_of_nodes))

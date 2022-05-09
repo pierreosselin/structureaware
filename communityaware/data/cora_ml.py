@@ -15,12 +15,6 @@ class CoraML(CitationFull):
         self.training_nodes_per_class = training_nodes_per_class
         super().__init__(root, 'cora_ml', transform=transform, pre_transform=pre_transform)
 
-    def noise_matrix(self, p_add, p_delete):
-        noise = np.ones((self.data.num_nodes, self.data.num_nodes)) * p_add
-        for index in self.data.edge_index.numpy().T:
-            noise[index[0], index[1]] = p_delete
-        return noise
-
     def download(self):
         return super().download()
 
@@ -38,3 +32,13 @@ class CoraML(CitationFull):
         self.data.test_mask = torch.zeros(self.data.num_nodes, dtype=bool).scatter_(0, torch.tensor(test_idx), 1)
 
         torch.save((self.data, slices), self.processed_paths[0])
+
+    def noise_matrix(self, p_add, p_delete):
+        noise = np.ones((self.data.num_nodes, self.data.num_nodes)) * p_add
+        for index in self.data.edge_index.numpy().T:
+            noise[index[0], index[1]] = p_delete
+        return noise
+
+    @property
+    def testset_length(self):
+        return len(self.data.test_mask)

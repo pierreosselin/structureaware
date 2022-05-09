@@ -1,19 +1,21 @@
 from communityaware.utils import mask_other_gpus
+
 mask_other_gpus(1)
 
 import argparse
+import os
+from itertools import product
+from os.path import join
+
+import numpy as np
 import torch
 import torch.nn.functional as F
 import yaml
+from tqdm import tqdm
+
+from communityaware.data import HIV, CoraML, Synthetic
 from communityaware.models import GCN_Classification
 from communityaware.perturb import batch_perturbed_graph
-from communityaware.data import Synthetic, HIV
-from tqdm import tqdm
-from os.path import join
-import os
-import numpy as np
-from itertools import product
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='synthetic')
@@ -35,7 +37,8 @@ if config['dataset'].lower() == 'synthetic':
     dataset = Synthetic('data')
 elif config['dataset'].lower() == 'hiv':
     dataset = HIV('data', min_required_edge_flips=20)
-test_loader = dataset.dataloader('test', batch_size=1)
+elif config['dataset'].lower() == 'cora_ml':
+    dataset = CoraML('data')
 
 # Load config parameters
 model = GCN_Classification(hidden_channels=config['optimisation']['hidden_channels'], num_features=dataset.num_features, num_classes=dataset.num_classes)
@@ -43,9 +46,9 @@ model.load_state_dict(torch.load(join(model_path, "weights.pt")))
 model.eval()
 
 for alpha_pair in tqdm(alpha_pairs, desc="Loop over values of alpha.", total=len(alphas)**2):
-    votes = torch.zeros((len(test_loader), dataset.num_classes), dtype=torch.long)
+    votes = torch.zeros((dataset.testset_length, dataset.num_classes), dtype=torch.long)
     with torch.no_grad():
-        pbar = tqdm(enumerate(test_loader.dataset), leave=False, total=len(test_loader))
+        pbar = tqdm(enumerate(dataset.testset_length), leave=False, total=dataset.testset_length)
         for i, graph in pbar:
             pbar.set_description(f'Perturbing graph.')
             noise = dataset.make_noise_matrix(graph, *alpha_pair)
