@@ -1,12 +1,14 @@
+import copy
+from functools import partial
+
 import jax
 import jax.numpy as jnp
-from functools import partial
-import torch_geometric
-from torch_geometric.loader import DataLoader
-from torch_geometric.utils import to_dense_adj, from_scipy_sparse_matrix
 import numpy as np
 import scipy.sparse as sp
-import copy
+import torch_geometric
+from torch_geometric.loader import DataLoader
+from torch_geometric.utils import from_scipy_sparse_matrix, to_dense_adj
+
 
 def batch_perturbed_graph(graph: torch_geometric.data.data.Data, p: np.ndarray, repeats: int, batch_size=32):
     """Return a batchloader of graphs with perturbed edges.
