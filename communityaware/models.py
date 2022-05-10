@@ -28,14 +28,14 @@ class GCN_Classification(torch.nn.Module):
         self.linear = nn.Linear(dimensions[-2], dimensions[-1])
         self.dropout = dropout
 
-    def forward(self, x, edge_index, batch=None):
+    def forward(self, x, edge_index, batch=None, pooling=False):
         # 1. Obtain node embeddings
         for conv in self.convs:
             x = conv(x, edge_index)
             x = x.relu()
 
         # 2. Readout layer if graph classification
-        if batch is not None:
+        if pooling:
             x = global_mean_pool(x, batch)  # [batch_size, hidden_channels]
 
         # 3. Apply a final classifier

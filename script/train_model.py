@@ -25,7 +25,7 @@ def train_epoch_graph_classification(model, dataset, criterion, optimiser):
     accuracy = torchmetrics.Accuracy()
     epoch_loss = torchmetrics.MeanMetric()
     for batch in train_loader:  # Iterate in batches over the training dataset.
-        out = model(batch.x, batch.edge_index, batch.batch)  # Perform a single forward pass.
+        out = model(batch.x, batch.edge_index, batch.batch, pooling=True)  # Perform a single forward pass.
         loss = criterion(out, batch.y)  # Compute the loss.
         loss.mean().backward()  # Derive gradients.
         epoch_loss.update(loss.cpu())
@@ -41,7 +41,7 @@ def evaluate_graph_classification(model, dataset, criterion, split):
         accuracy = torchmetrics.Accuracy()
         epoch_loss = torchmetrics.MeanMetric()
         for batch in loader:  # Iterate in batches over the training/test dataset.
-            out = model(batch.x, batch.edge_index, batch.batch)
+            out = model(batch.x, batch.edge_index, batch.batch, pooling=True)
             loss = criterion(out, batch.y)
             epoch_loss.update(loss.cpu())
             accuracy.update(out.cpu(), batch.y.cpu())

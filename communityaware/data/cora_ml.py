@@ -30,10 +30,11 @@ class CoraML(CitationFull):
         self.data.train_mask = torch.zeros(self.data.num_nodes, dtype=bool).scatter_(0, torch.tensor(train_idx), 1)
         self.data.val_mask = torch.zeros(self.data.num_nodes, dtype=bool).scatter_(0, torch.tensor(valid_idx), 1)
         self.data.test_mask = torch.zeros(self.data.num_nodes, dtype=bool).scatter_(0, torch.tensor(test_idx), 1)
+        self.data.idx = torch.tensor(0)
 
         torch.save((self.data, slices), self.processed_paths[0])
 
-    def noise_matrix(self, p_add, p_delete):
+    def make_noise_matrix(self, p_add, p_delete):
         noise = np.ones((self.data.num_nodes, self.data.num_nodes)) * p_add
         for index in self.data.edge_index.numpy().T:
             noise[index[0], index[1]] = p_delete
