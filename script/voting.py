@@ -14,11 +14,9 @@ import yaml
 from torch_geometric.utils import to_dense_batch
 from tqdm import tqdm
 
-from communityaware.data import HIV, CoraML, Synthetic
 from communityaware.models import GCN_Classification
 from communityaware.perturb import batch_perturbed_graph
-
-from .utils import load_dataset
+from communityaware.utils import load_dataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='synthetic')

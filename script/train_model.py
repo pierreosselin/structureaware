@@ -7,12 +7,12 @@ import torch
 import torchmetrics
 import yaml
 
-from communityaware.data import HIV, CoraML, Synthetic
 from communityaware.models import GCN_Classification
+from communityaware.utils import load_dataset
 
 # Parse arguments
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', type=str, default='cora_ml')
+parser.add_argument('--config', type=str, default='synthetic')
 parser.add_argument('--device', type=str, default='cpu')
 args = parser.parse_args()
 config = yaml.safe_load(open(f'config/{args.config}.yaml'))
@@ -70,12 +70,7 @@ def evaluate_node_classification(model, dataset, criterion, split):
         return loss.item(), accuracy.item()
 
 # load data
-if config['dataset'].lower() == 'synthetic':
-    dataset = Synthetic('data')
-elif config['dataset'].lower() == 'hiv':
-    dataset = HIV('data', min_required_edge_flips=20)
-elif config['dataset'].lower() == 'cora_ml':
-    dataset = CoraML('data')
+dataset = load_dataset(config['dataset'])
 dataset.data.to(device)
 
 # determine if the dataset is graph or node classification

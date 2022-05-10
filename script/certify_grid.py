@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 from communityaware.cert import compute_certificate_gmpy as compute_certificate
 from communityaware.data import Synthetic
+from communityaware.utils import load_dataset
 
 # parse arguments
 parser = argparse.ArgumentParser()
@@ -22,7 +23,7 @@ vote_path = join('output', config['dataset'], 'votes')
 certificate_path = join('output', config['dataset'], 'certificates')
 
 # load test set
-dataset = Synthetic('data')
+dataset = load_dataset(config['dataset'])
 test_set = dataset.dataloader('test', batch_size=1).dataset
 
 # load votes
@@ -31,8 +32,9 @@ alpha_max = config['certification']['alpha_parameter_max']
 alpha_step = config['certification']['alpha_parameter_step']
 alphas = np.arange(alpha_min, alpha_max + 10e-8, alpha_step) # 10e-8 makes the arange inclusive when alpha_step divides alpha_max.  
 alpha_pairs = list(product(alphas, alphas)) # one for each p
-r_max = config['certification']['r_max']
+r_max = 10 #config['certification']['r_max'] # TODO change this 
 confidence_level = config['certification']['confidence_level']
+alpha_pairs = [(0.01, 0.6)] # TODO CHANGE THIS
 
 # compute certificate.
 certificates = {} # maps alpha_pair to certificate grid 
