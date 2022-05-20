@@ -1,18 +1,27 @@
-dataset: cora_ml
+data:
+  name: cora_ml
+  training_nodes_per_class: 20
 
 model:
   hidden_channels: [16, 16]
 
 training:
   lr: 0.01
-  max_epochs: 50
+  batch_size: 32
+  max_epochs: 100
+
+voting:
+  repeats: 10000
+  batch_size: 50
 
 noise:
-  P_min: (0.01, 0.06)
-  P_max: (0.01, 0.06)
-  P_steps: (0.0, 0.0)
+  P_min: [0.01, 0.06]
+  P_max: [0.01, 0.06]
+  P_step: [0.0, 0.0]
 
 radius:
-  R_min: (1, 1)
-  R_max: (8, 22)
-  R_step: (1, 1)
+  R_min: [1, 1]
+  R_max: [8, 22]
+  R_step: [1, 1]
+
+confidence_level: 0.99

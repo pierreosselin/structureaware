@@ -106,8 +106,8 @@ class Synthetic(InMemoryDataset):
         return noise 
 
     @property
-    def testset_length(self):
-        return len(self.dataloader('test', batch_size=1))
+    def testset_labels(self):
+        return torch.concat([self[i].y for i in self.split['test']])
 
 
 def ER(number_of_nodes):

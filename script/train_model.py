@@ -10,18 +10,11 @@ import yaml
 from communityaware.models import GCN_Classification
 from communityaware.utils import load_dataset
 
-# Parse arguments
-parser = argparse.ArgumentParser()
-parser.add_argument('--config', type=str, default='synthetic')
-parser.add_argument('--device', type=str, default='cpu')
-args = parser.parse_args()
-config = yaml.safe_load(open(f'config/{args.config}.yaml'))
-device = args.device
 
 # helper functions for graph classification
 def train_epoch_graph_classification(model, dataset, criterion, optimiser):
     model.train()
-    train_loader = dataset.dataloader('train', config['optimisation']['batch_size'])
+    train_loader = dataset.dataloader('train', config['training']['batch_size'])
     accuracy = torchmetrics.Accuracy()
     epoch_loss = torchmetrics.MeanMetric()
     for batch in train_loader:  # Iterate in batches over the training dataset.
@@ -36,7 +29,7 @@ def train_epoch_graph_classification(model, dataset, criterion, optimiser):
 
 def evaluate_graph_classification(model, dataset, criterion, split):
     with torch.no_grad():
-        loader = dataset.dataloader(split, config['optimisation']['batch_size'])
+        loader = dataset.dataloader(split, config['training']['batch_size'])
         model.eval()
         accuracy = torchmetrics.Accuracy()
         epoch_loss = torchmetrics.MeanMetric()
@@ -69,42 +62,51 @@ def evaluate_node_classification(model, dataset, criterion, split):
         accuracy = torchmetrics.Accuracy()(out.cpu(), dataset.data.y[mask].cpu())
         return loss.item(), accuracy.item()
 
-# load data
-dataset = load_dataset(config['dataset'])
-dataset.data.to(device)
+if __name__ == '__main__':
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, default='hiv')
+    parser.add_argument('--device', type=str, default='cpu')
+    args = parser.parse_args()
+    config = yaml.safe_load(open(f'config/{args.config}.yaml'))
+    device = args.device
 
-# determine if the dataset is graph or node classification
-graph_classification_task = True if config['dataset'].lower() in ['synthetic', 'hiv'] else False
+    # load data
+    dataset = load_dataset(config)
+    dataset.data.to(device)
 
-# Instanciate model, optimiser and loss
-model = GCN_Classification(num_features=dataset.num_features, hidden_channels=config['optimisation']['hidden_channels'], num_classes=dataset.num_classes).to(device)
-optimiser = torch.optim.Adam(model.parameters(), lr=config['optimisation']['lr'])
-criterion = torch.nn.CrossEntropyLoss(reduction='none')
+    # determine if the dataset is graph or node classification
+    graph_classification_task = True if config['data']['name'].lower() in ['synthetic', 'hiv'] else False
 
-# early stopping
-best_model = None
-best_loss = np.inf
+    # Instanciate model, optimiser and loss
+    model = GCN_Classification(num_features=dataset.num_features, hidden_channels=config['model']['hidden_channels'], num_classes=dataset.num_classes).to(device)
+    optimiser = torch.optim.Adam(model.parameters(), lr=config['training']['lr'])
+    criterion = torch.nn.CrossEntropyLoss(reduction='none')
 
-# training loop functions
-train_epoch = train_epoch_graph_classification if graph_classification_task else train_epoch_node_classification
-evaluate = evaluate_graph_classification if graph_classification_task else evaluate_node_classification
+    # early stopping
+    best_model = None
+    best_loss = np.inf
 
-# training
-for epoch in range(config['optimisation']['max_epochs']):
-    train_loss, train_accuracy = train_epoch(model, dataset, criterion, optimiser)
-    valid_loss, valid_accuracy = evaluate(model, dataset, criterion, 'valid')
-    print(epoch, round(train_loss, 3), round(valid_loss, 3), round(train_accuracy, 2), round(valid_accuracy, 2))
-    if valid_loss < best_loss:
-        best_loss = valid_loss
-        best_model = model.state_dict()
+    # training loop functions
+    train_epoch = train_epoch_graph_classification if graph_classification_task else train_epoch_node_classification
+    evaluate = evaluate_graph_classification if graph_classification_task else evaluate_node_classification
 
-# test model
-model.load_state_dict(best_model)
-test_loss, test_accuracy = evaluate(model, dataset, criterion, 'test')
-print(f'Test loss: {round(test_loss, 3)}. Test accuracy: {round(test_accuracy, 2)}.')
+    # training
+    for epoch in range(config['training']['max_epochs']):
+        train_loss, train_accuracy = train_epoch(model, dataset, criterion, optimiser)
+        valid_loss, valid_accuracy = evaluate(model, dataset, criterion, 'valid')
+        print(epoch, round(train_loss, 3), round(valid_loss, 3), round(train_accuracy, 2), round(valid_accuracy, 2))
+        if valid_loss < best_loss:
+            best_loss = valid_loss
+            best_model = model.state_dict()
 
-# save model
-print("Saving model...")
-model_path = join('output', config['dataset'], 'weights')
-os.makedirs(model_path, exist_ok=True)
-torch.save(model.cpu().state_dict(), join(model_path, "weights.pt"))
+    # test model
+    model.load_state_dict(best_model)
+    test_loss, test_accuracy = evaluate(model, dataset, criterion, 'test')
+    print(f'Test loss: {round(test_loss, 3)}. Test accuracy: {round(test_accuracy, 2)}.')
+
+    # save model
+    print("Saving model...")
+    model_path = join('output', config['data']['name'], 'weights')
+    os.makedirs(model_path, exist_ok=True)
+    torch.save(model.cpu().state_dict(), join(model_path, "weights.pt"))

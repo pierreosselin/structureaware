@@ -16,7 +16,7 @@ from communityaware.data.utils import assign_graph_ids, split_data
 
 class HIV(InMemoryDataset):
 
-    def __init__(self, root: str, split_proportions: Tuple[float, float, float]=(0.8, 0.1, 0.1), min_required_edge_flips: int=0, transform: Callable=None, pre_transform: Callable=None, pre_filter: Callable=None):
+    def __init__(self, root: str, min_required_edge_flips: int=0, split_proportions: Tuple[float, float, float]=(0.8, 0.1, 0.1), transform: Callable=None, pre_transform: Callable=None, pre_filter: Callable=None):
         """HIV Dataset. Uses subsampling to balance the dataset.
 
         Args:
@@ -115,8 +115,8 @@ class HIV(InMemoryDataset):
         return noise 
 
     @property
-    def testset_length(self):
-        return len(self.dataloader('test', batch_size=1))
+    def testset_labels(self):
+        return torch.concat([self[i].y for i in self.split['test']])
 
 
 def enough_potential_edge_flips(graph, min_required_edge_flips):

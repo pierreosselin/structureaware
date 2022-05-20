@@ -41,5 +41,5 @@ class CoraML(CitationFull):
         return noise
 
     @property
-    def testset_length(self):
-        return len(self.data.test_mask)
+    def testset_labels(self):
+        return self.data.y[self.data.test_mask]

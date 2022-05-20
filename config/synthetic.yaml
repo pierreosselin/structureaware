@@ -1,19 +1,28 @@
-## Configuration File
-dataset: synthetic
-graphs_per_class: 300
-community_sizes: [20, 20, 20]
-sbm_parameters: [[0.2, 0.02, 0.02], [0.02, 0.2, 0.02], [0.02, 0.02, 0.2]]
-data_split: [0.7, 0.2, 0.1]
-optimisation:
-  lr: 0.01
-  max_epochs: 40
+data: 
+  name: synthetic
+  graphs_per_class: 2000
+  size_of_community: 20
+  number_of_communities: 3
+  split_proportions: [0.8, 0.15, 0.05]
+
+model:
   hidden_channels: [16, 16]
+
+training:
+  lr: 0.01
   batch_size: 32
-certification:
-  sample_eval: 1000
-  batch_size: 200
-  alpha_parameter_min: 0.01
-  alpha_parameter_max: 0.1 #0.2
-  alpha_parameter_step: 0.02 # 0.01
-  r_max: 7
-  confidence_level: 0.99
+  max_epochs: 100
+
+voting:
+  repeats: 10000
+  batch_size: 50
+
+noise:
+  P_min: [0.01, 0.01]
+  P_max: [0.1, 0.1]
+  P_step: [0.02, 0.02]
+
+radius:
+  R_max: [7, 7]
+
+confidence_level: 0.99

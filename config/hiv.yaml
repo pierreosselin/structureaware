@@ -1,16 +1,28 @@
-## Configuration File
-dataset: hiv
-data_split: [0.7, 0.2, 0.1]
-optimisation:
-  lr: 0.01
-  max_epochs: 50
+data: 
+  name: hiv
+  min_required_edge_flips: 20
+  split_proportions: [0.7, 0.2, 0.1]
+
+model:
   hidden_channels: [16, 16]
+
+training:
+  lr: 0.01
+  max_epochs: 100
   batch_size: 32
-certification:
-  sample_eval: 1000
-  batch_size: 200
-  alpha_parameter_min: 0.01
-  alpha_parameter_max: 0.1
-  alpha_parameter_step: 0.02
-  r_max: 7
-  confidence_level: 0.99
+
+voting:
+  repeats: 10000
+  batch_size: 50
+
+noise:
+  P_min: [0.01, 0.01]
+  P_max: [0.1, 0.1]
+  P_steps: [0.02, 0.02]
+
+radius:
+  R_min: [1, 1]
+  R_max: [7, 7]
+  R_step: [1, 1]
+
+confidence_level: 0.99
