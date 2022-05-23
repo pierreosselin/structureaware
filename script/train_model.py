@@ -51,7 +51,7 @@ def train_epoch_node_classification(model, dataset, criterion, optimiser):
     optimiser.step()  # Update parameters based on gradients.
     optimiser.zero_grad()  # Clear gradients.
     return loss.item(), accuracy.item()
-    
+
 
 def evaluate_node_classification(model, dataset, criterion, split):
     with torch.no_grad():
@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     # Instanciate model, optimiser and loss
     model = GCN_Classification(num_features=dataset.num_features, hidden_channels=config['model']['hidden_channels'], num_classes=dataset.num_classes).to(device)
-    optimiser = torch.optim.Adam(model.parameters(), lr=config['training']['lr'])
+    optimiser = torch.optim.Adam(model.parameters(), lr=config['training']['lr'], weight_decay=config['training']['weight_decay'])
     criterion = torch.nn.CrossEntropyLoss(reduction='none')
 
     # early stopping
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     print(f'Test loss: {round(test_loss, 3)}. Test accuracy: {round(test_accuracy, 2)}.')
 
     # save model
-    print("Saving model...")
+    print('Saving model...')
     model_path = join('output', config['data']['name'], 'weights')
     os.makedirs(model_path, exist_ok=True)
-    torch.save(model.cpu().state_dict(), join(model_path, "weights.pt"))
+    torch.save(model.cpu().state_dict(), join(model_path, 'weights.pt'))
