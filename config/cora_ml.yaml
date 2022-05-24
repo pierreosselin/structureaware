@@ -13,7 +13,7 @@ training:
 
 voting:
   repeats: 100000
-  batch_size: 80
+  batch_size: 25
 
 noise:
   P_min: [0.01, 0.06]

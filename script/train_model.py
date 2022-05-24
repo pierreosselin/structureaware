@@ -84,6 +84,7 @@ if __name__ == '__main__':
         num_classes=dataset.num_classes,
         pooling =graph_classification_task
     ).to(device)
+
     optimiser = torch.optim.Adam(model.parameters(), lr=config['training']['lr'], weight_decay=config['training']['weight_decay'])
     criterion = torch.nn.CrossEntropyLoss(reduction='none')
 
