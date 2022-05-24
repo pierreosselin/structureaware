@@ -13,7 +13,7 @@ import yaml
 from torch_geometric.utils import to_dense_batch
 from tqdm import tqdm
 
-from communityaware.models import GCN_Classification
+from communityaware.models import GCN
 from communityaware.perturb import batch_perturbed_graph
 from communityaware.utils import load_dataset, make_noise_grid
 
@@ -61,13 +61,13 @@ def votes_graph_classification(alpha_pair, dataset, repeats=10000, batch_size=32
             perturbed_graphs = batch_perturbed_graph(graph, noise, repeats=repeats, batch_size=batch_size)
             pbar.set_description(f'Predicting labels.')
             for batch in perturbed_graphs:
-                predictions = model(batch.x, batch.edge_index, batch.batch, pooling=True).argmax(axis=1)
+                predictions = model(batch.x, batch.edge_index, batch.batch).argmax(axis=1)
                 votes[i] += torch.bincount(predictions, minlength=dataset.num_classes)
     return votes
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='cora_ml')
+    parser.add_argument('--config', type=str)
     args = parser.parse_args()
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
 
@@ -85,7 +85,11 @@ if __name__ == '__main__':
     graph_classification_task = True if config['data']['name'].lower() in ['synthetic', 'hiv'] else False
 
     # Load config parameters
-    model = GCN_Classification(hidden_channels=config['model']['hidden_channels'], num_features=dataset.num_features, num_classes=dataset.num_classes)
+    model = GCN(hidden_channels=config['model']['hidden_channels'],
+        num_features=dataset.num_features,
+        num_classes=dataset.num_classes,
+        pooling=graph_classification_task
+    )
     model.load_state_dict(torch.load(join(model_path, 'weights.pt')))
     model.eval()
 

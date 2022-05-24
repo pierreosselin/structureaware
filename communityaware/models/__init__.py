@@ -1,2 +1,2 @@
-from .GCN import GCN_Classification
+from .GCN import GCN
 from .NBC import NBCModel

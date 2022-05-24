@@ -7,7 +7,7 @@ import torch
 import torchmetrics
 import yaml
 
-from communityaware.models import GCN_Classification
+from communityaware.models import GCN
 from communityaware.utils import load_dataset
 
 
@@ -18,7 +18,7 @@ def train_epoch_graph_classification(model, dataset, criterion, optimiser):
     accuracy = torchmetrics.Accuracy()
     epoch_loss = torchmetrics.MeanMetric()
     for batch in train_loader:  # Iterate in batches over the training dataset.
-        out = model(batch.x, batch.edge_index, batch.batch, pooling=True)  # Perform a single forward pass.
+        out = model(batch.x, batch.edge_index, batch.batch)  # Perform a single forward pass.
         loss = criterion(out, batch.y)  # Compute the loss.
         loss.mean().backward()  # Derive gradients.
         epoch_loss.update(loss.cpu())
@@ -34,7 +34,7 @@ def evaluate_graph_classification(model, dataset, criterion, split):
         accuracy = torchmetrics.Accuracy()
         epoch_loss = torchmetrics.MeanMetric()
         for batch in loader:  # Iterate in batches over the training/test dataset.
-            out = model(batch.x, batch.edge_index, batch.batch, pooling=True)
+            out = model(batch.x, batch.edge_index, batch.batch)
             loss = criterion(out, batch.y)
             epoch_loss.update(loss.cpu())
             accuracy.update(out.cpu(), batch.y.cpu())
@@ -65,7 +65,7 @@ def evaluate_node_classification(model, dataset, criterion, split):
 if __name__ == '__main__':
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='hiv')
+    parser.add_argument('--config', type=str)
     parser.add_argument('--device', type=str, default='cpu')
     args = parser.parse_args()
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
@@ -79,7 +79,11 @@ if __name__ == '__main__':
     graph_classification_task = True if config['data']['name'].lower() in ['synthetic', 'hiv'] else False
 
     # Instanciate model, optimiser and loss
-    model = GCN_Classification(num_features=dataset.num_features, hidden_channels=config['model']['hidden_channels'], num_classes=dataset.num_classes).to(device)
+    model = GCN(num_features=dataset.num_features,
+        hidden_channels=config['model']['hidden_channels'],
+        num_classes=dataset.num_classes,
+        pooling =graph_classification_task
+    ).to(device)
     optimiser = torch.optim.Adam(model.parameters(), lr=config['training']['lr'], weight_decay=config['training']['weight_decay'])
     criterion = torch.nn.CrossEntropyLoss(reduction='none')
 
