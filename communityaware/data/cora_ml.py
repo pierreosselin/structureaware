@@ -5,13 +5,14 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch_geometric.datasets import CitationFull
 from torch_geometric.io import read_npz
+from torch_geometric.transforms import LargestConnectedComponents
 
 from communityaware.data.utils import assign_graph_ids, split_data
 
 
 class CoraML(CitationFull):
 
-    def __init__(self, root, training_nodes_per_class=20, transform=None, pre_transform=None):
+    def __init__(self, root, training_nodes_per_class=20, transform=None, pre_transform=LargestConnectedComponents()):
         self.training_nodes_per_class = training_nodes_per_class
         super().__init__(root, 'cora_ml', transform=transform, pre_transform=pre_transform)
 
