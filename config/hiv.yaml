@@ -1,4 +1,4 @@
-data: 
+data:
   name: hiv
   min_required_edge_flips: 20
   split_proportions: [0.7, 0.2, 0.1]
@@ -7,18 +7,19 @@ model:
   hidden_channels: [16, 16]
 
 training:
-  lr: 0.01
-  max_epochs: 100
+  lr: 0.001
+  max_epochs: 3000
   batch_size: 32
+  weight_decay: 0.001
 
 voting:
-  repeats: 10000
+  repeats: 100000
   batch_size: 50
 
 noise:
   P_min: [0.01, 0.01]
   P_max: [0.1, 0.1]
-  P_steps: [0.02, 0.02]
+  P_step: [0.02, 0.02]
 
 radius:
   R_min: [1, 1]

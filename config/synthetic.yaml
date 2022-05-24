@@ -1,20 +1,21 @@
-data: 
+data:
   name: synthetic
   graphs_per_class: 2000
   size_of_community: 20
   number_of_communities: 3
-  split_proportions: [0.8, 0.15, 0.05]
+  split_proportions: [0.8, 0.175, 0.025]
 
 model:
   hidden_channels: [16, 16]
 
 training:
-  lr: 0.01
+  lr: 0.001
+  max_epochs: 3000
   batch_size: 32
-  max_epochs: 100
+  weight_decay: 0.001
 
 voting:
-  repeats: 10000
+  repeats: 100000
   batch_size: 50
 
 noise:

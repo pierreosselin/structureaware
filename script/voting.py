@@ -1,6 +1,6 @@
 from communityaware.utils import mask_other_gpus
 
-mask_other_gpus(1)
+mask_other_gpus(3)
 
 import argparse
 import os
