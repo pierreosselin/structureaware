@@ -8,7 +8,7 @@ from communityaware.data import HIV, CoraML, Synthetic
 
 def mask_other_gpus(gpu_number):
     """Mask all other GPUs than the one specified."""
-    os.environ["CUDA_VISIBLE_DEVICES"]=str(gpu_number)
+    os.environ['CUDA_VISIBLE_DEVICES']=str(gpu_number)
 
 
 def load_dataset(config):
@@ -24,11 +24,17 @@ def load_dataset(config):
     return dataset
 
 def make_noise_grid(config):
-    P_min = map(float, config['noise']['P_min'])
-    P_max = map(float, config['noise']['P_max'])
-    P_step = map(float, config['noise']['P_step'])
-    ranges = [np.arange(p_min, p_max + 10e-8 + p_step) for (p_min, p_max, p_step) in zip(P_min, P_max, P_step)]
+    P_min = list(map(float, config['noise']['P_min']))
+    P_max = list(map(float, config['noise']['P_max']))
+    P_step = list(map(float, config['noise']['P_step']))
+    ranges = [inclusive_arange(p_min, p_max + 10e-8, p_step) for (p_min, p_max, p_step) in zip(P_min, P_max, P_step)]
     return list(product(*ranges))
+
+def inclusive_arange(x_min, x_max, step):
+    if np.isclose(x_min, x_max):
+        return np.array([x_min,])
+    else:
+        return np.arange(x_min, x_max + 10e-8, step)
 
 def make_radius_grid(config):
     R_max = map(int, config['radius']['R_max'])

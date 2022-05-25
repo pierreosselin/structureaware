@@ -10,7 +10,7 @@ from torch_geometric.utils import to_dense_batch
 from tqdm import tqdm
 
 from communityaware.models import GCN
-from communityaware.perturb import batch_perturbed_graph
+from communityaware.perturb import perturb_graph
 from communityaware.utils import load_dataset, make_noise_grid
 
 
@@ -26,8 +26,8 @@ def votes_node_classification(model, alpha_pair, dataset, repeats=10000, batch_s
         for _ in range(repeats // batch_size):
             # repeat and perturb the graph batch_size times
             pbar.set_description(f'Perturbing graph.')
-            noise = torch.tensor(dataset.make_noise_matrix(*alpha_pair))
-            perturbed_graphs = batch_perturbed_graph(dataset.data, noise, repeats=batch_size, batch_size=batch_size, device=device)
+            noise = dataset.make_noise_matrix(*alpha_pair)
+            perturbed_graphs = perturb_graph(dataset.data, noise, repeats=batch_size, batch_size=batch_size, device=device)
             batch = list(perturbed_graphs)[0].to(device)
 
             # predict the labels of the perturbed graphs
@@ -54,7 +54,7 @@ def votes_graph_classification(model, alpha_pair, dataset, repeats=10000, batch_
         for i, graph in pbar:
             pbar.set_description(f'Perturbing graph.')
             noise = torch.tensor(dataset.make_noise_matrix(graph, *alpha_pair))
-            perturbed_graphs = batch_perturbed_graph(graph, noise, repeats=repeats, batch_size=batch_size, device=device)
+            perturbed_graphs = perturb_graph(graph, noise, repeats=repeats, batch_size=batch_size, device=device)
             pbar.set_description(f'Predicting labels.')
             for batch in perturbed_graphs:
                 batch = batch.to(device)
@@ -64,7 +64,7 @@ def votes_graph_classification(model, alpha_pair, dataset, repeats=10000, batch_
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='synthetic')
+    parser.add_argument('--config', type=str, default='cora_ml')
     parser.add_argument('--device', type=str, default='cuda:3')
     args = parser.parse_args()
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))

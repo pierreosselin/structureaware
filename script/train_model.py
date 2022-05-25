@@ -1,18 +1,27 @@
 import argparse
 import os
 from os.path import join
+from typing import Callable, Optional
 
 import numpy as np
 import torch
+import torch.nn as nn
 import torchmetrics
 import yaml
+from torch.nn.modules.loss import _Loss
+from torch.optim.optimizer import Optimizer
+from torch_geometric.data import InMemoryDataset
+from torch_geometric.utils import to_dense_batch
 
 from communityaware.models import GCN
+from communityaware.perturb import perturb_graph
 from communityaware.utils import load_dataset
 
 
 # helper functions for graph classification
-def train_epoch_graph_classification(model, dataset, criterion, optimiser):
+def train_epoch_graph_classification(model: nn.Module, dataset: InMemoryDataset, criterion: _Loss, optimiser: Optimizer, smoothing: int=None) -> tuple:
+    if smoothing is not None:
+        raise NotImplementedError('Smoothing not implemented for graph classification.')
     model.train()
     train_loader = dataset.dataloader('train', config['training']['batch_size'])
     accuracy = torchmetrics.Accuracy()
@@ -27,7 +36,7 @@ def train_epoch_graph_classification(model, dataset, criterion, optimiser):
         optimiser.zero_grad()  # Clear gradients.
     return epoch_loss.compute().item(), accuracy.compute().item()
 
-def evaluate_graph_classification(model, dataset, criterion, split):
+def evaluate_graph_classification(model: nn.Module, dataset: InMemoryDataset, criterion: _Loss, split: str) -> tuple:
     with torch.no_grad():
         loader = dataset.dataloader(split, config['training']['batch_size'])
         model.eval()
@@ -41,10 +50,17 @@ def evaluate_graph_classification(model, dataset, criterion, split):
         return epoch_loss.compute().item(), accuracy.compute().item()
 
 # helper functions for node classification
-def train_epoch_node_classification(model, dataset, criterion, optimiser):
+def train_epoch_node_classification(model: nn.Module, dataset: InMemoryDataset, criterion: _Loss, optimiser: Optimizer, smoothing: int=None) -> tuple:
     model.train()
     train_mask = dataset.data.train_mask
-    out = model(dataset.data.x, dataset.data.edge_index)[train_mask]
+    if smoothing is None:
+        out = model(dataset.data.x, dataset.data.edge_index)[train_mask]
+    else:
+        # TODO: fix this horribleness and hardcoded stuff...
+        batch = list(perturb_graph(dataset.data, dataset.make_noise_matrix(0.01, 0.06).to(device), repeats=smoothing, batch_size=smoothing))[0].to(device)
+        out = model(batch.x, batch.edge_index, batch.batch)
+        out = to_dense_batch(out, batch.batch)[0]
+        out = out.mean(axis=0)[train_mask]
     loss = criterion(out, dataset.data.y[train_mask]).mean()  # Compute the loss.
     loss.backward()  # Derive gradients.
     accuracy = torchmetrics.Accuracy()(out.cpu(), dataset.data.y[train_mask].cpu())
@@ -52,8 +68,7 @@ def train_epoch_node_classification(model, dataset, criterion, optimiser):
     optimiser.zero_grad()  # Clear gradients.
     return loss.item(), accuracy.item()
 
-
-def evaluate_node_classification(model, dataset, criterion, split):
+def evaluate_node_classification(model: nn.Module, dataset: InMemoryDataset, criterion: _Loss, split: str) -> tuple:
     with torch.no_grad():
         model.eval()
         mask = dataset.data.test_mask if split=='test' else dataset.data.val_mask
@@ -65,8 +80,8 @@ def evaluate_node_classification(model, dataset, criterion, split):
 if __name__ == '__main__':
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str)
-    parser.add_argument('--device', type=str, default='cpu')
+    parser.add_argument('--config', type=str, default='cora_ml')
+    parser.add_argument('--device', type=str, default='cuda:3')
     args = parser.parse_args()
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
     device = args.device
@@ -93,7 +108,9 @@ if __name__ == '__main__':
     best_loss = np.inf
 
     # training loop functions
+    train_epoch: Callable[[nn.Module, InMemoryDataset, _Loss, Optimizer, int], tuple]
     train_epoch = train_epoch_graph_classification if graph_classification_task else train_epoch_node_classification
+    evaluate: Callable[[nn.Module, InMemoryDataset, _Loss, str], tuple]
     evaluate = evaluate_graph_classification if graph_classification_task else evaluate_node_classification
 
     # training

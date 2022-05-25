@@ -36,8 +36,8 @@ class CoraML(CitationFull):
         torch.save((self.data, slices), self.processed_paths[0])
 
     def make_noise_matrix(self, p_add, p_delete):
-        noise = np.ones((self.data.num_nodes, self.data.num_nodes)) * p_add
-        for index in self.data.edge_index.numpy().T:
+        noise = torch.ones((self.data.num_nodes, self.data.num_nodes)) * p_add
+        for index in self.data.edge_index.T:
             noise[index[0], index[1]] = p_delete
         return noise
 

@@ -15,7 +15,7 @@ from communityaware.utils import (load_dataset, make_noise_grid,
 
 # parse arguments
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', type=str)
+parser.add_argument('--config', type=str, default='cora_ml')
 args = parser.parse_args()
 
 # load parameters
@@ -58,7 +58,7 @@ for noise in tqdm(noise_values, desc='Loop over values of noise.'):
 
         # computer certificate grid
         for R in radius:
-            idx = (sample_idx, *(R-1))
+            idx = (sample_idx, *R)
             if np.sum(R) == 0:
                 certificate_grid[idx] = 1.0 # has already been certifed correct and we know we didnt abstain.
             else:
@@ -66,6 +66,7 @@ for noise in tqdm(noise_values, desc='Loop over values of noise.'):
 
     certificates[noise] = {'certificate_grid': certificate_grid,
                            'correctly_classified': correctly_classified,
-                           'abstain': abstain}
+                           'abstain': abstain,
+                           'p_A': p_A}
 
 torch.save(certificates, join('output', config['data']['name'], 'certificates'))
