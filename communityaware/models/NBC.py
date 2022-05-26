@@ -6,6 +6,8 @@ import scipy.sparse as sp
 import torch
 import torch_geometric
 
+from .MLP import MLP
+
 
 class NBCModel(torch.nn.Module):
 
@@ -23,30 +25,14 @@ class NBCModel(torch.nn.Module):
         x = self.mlp(x)
         return x
 
-class MLP(torch.nn.Module):
-
-    def __init__(self, input_dim, hidden_dim, output_dim, dropout=0.0):
-        super(MLP, self).__init__()
-        self.module_list = torch.nn.ModuleList([
-            torch.nn.Linear(input_dim, hidden_dim),
-            torch.nn.ReLU(),
-            torch.nn.Dropout(dropout),
-            torch.nn.Linear(hidden_dim, output_dim)
-        ])
-
-    def forward(self, x):
-        for module in self.module_list:
-            x = module(x)
-        return x
-
 def non_backtracking_path_count(batch, max_walk_length):
     if not isinstance(batch, torch_geometric.data.Batch):
         raise ValueError('Only implemented for input of type torch_geometric.data.Batch.')
-    B = non_backtracking_matrix(batch.edge_index) 
+    B = non_backtracking_matrix(batch.edge_index)
     B_powers = accumulate([B for _ in range(max_walk_length)], lambda x, y: x @ y) # computes B, B^2, B^3 ... B^max_walk_length (this retains block diaganol batch structure)
-    B_powers_diag = np.stack([B.diagonal() for B in B_powers]) # row i is the diagonal of B^i 
+    B_powers_diag = np.stack([B.diagonal() for B in B_powers]) # row i is the diagonal of B^i
     split = np.cumsum([batch.get_example(i).num_edges for i in range(batch.num_graphs)]) # work out where to split the rows so they correspond to one graph in the batch
-    signatures = map(partial(np.sum, axis=1), np.split(B_powers_diag, split, axis=1)) # split the B_powers_matrix then take the trace 
+    signatures = map(partial(np.sum, axis=1), np.split(B_powers_diag, split, axis=1)) # split the B_powers_matrix then take the trace
     signatures = torch.tensor(np.stack(list(signatures)), dtype=torch.float) # put into torch format
     return signatures
 

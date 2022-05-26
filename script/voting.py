@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from communityaware.models import GCN
 from communityaware.perturb import perturb_graph
-from communityaware.utils import load_dataset, make_noise_grid
+from communityaware.utils import load_dataset, load_model, make_noise_grid
 
 
 def votes_node_classification(model, alpha_pair, dataset, repeats=10000, batch_size=50, device='cpu'):
@@ -58,14 +58,18 @@ def votes_graph_classification(model, alpha_pair, dataset, repeats=10000, batch_
             pbar.set_description(f'Predicting labels.')
             for batch in perturbed_graphs:
                 batch = batch.to(device)
-                predictions = model(batch.x, batch.edge_index, batch.batch).argmax(axis=1)
-                votes[i] += torch.bincount(predictions, minlength=dataset.num_classes)
+                if dataset.num_classes > 2:
+                    predictions = model(batch).argmax(axis=1)
+                    votes[i] += torch.bincount(predictions, minlength=dataset.num_classes)
+                else:
+                    predictions = model(batch) > 0
+                    votes[i] += torch.bincount(predictions.long().squeeze(), minlength=2)
     return votes.cpu()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='cora_ml')
-    parser.add_argument('--device', type=str, default='cuda:3')
+    parser.add_argument('--config', type=str, default='synthetic')
+    parser.add_argument('--device', type=str, default='cpu')
     args = parser.parse_args()
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
     device = args.device
@@ -79,16 +83,16 @@ if __name__ == '__main__':
 
     # load data
     dataset = load_dataset(config)
+    dataset_name = config['data']['name'].lower()
 
     # determine if the dataset is graph or node classification
-    graph_classification_task = True if config['data']['name'].lower() in ['synthetic', 'hiv'] else False
+    graph_classification_task = True if dataset_name in ['synthetic', 'hiv'] else False
+
+    # determine if we should use positional_encoding
+    use_positional_encoding = True if dataset_name == 'synthetic' else False
 
     # Load config parameters
-    model = GCN(hidden_channels=config['model']['hidden_channels'],
-        num_features=dataset.num_features,
-        num_classes=dataset.num_classes,
-        pooling=graph_classification_task
-    )
+    model = load_model(config).to(device)
     model = model.to(device)
     model.load_state_dict(torch.load(join(model_path, 'weights.pt')))
     model.eval()

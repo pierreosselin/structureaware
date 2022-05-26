@@ -2,8 +2,10 @@ import os
 from itertools import product
 
 import numpy as np
+import scipy.sparse as sp
 
 from communityaware.data import HIV, CoraML, Synthetic
+from communityaware.models import GCN, SpectrumNet
 
 
 def mask_other_gpus(gpu_number):
@@ -23,6 +25,16 @@ def load_dataset(config):
         raise ValueError('Dataset {} not supported'.format(dataset))
     return dataset
 
+def load_model(config):
+    dataset_name = config['data']['name'].lower()
+    graph_classification_task = True if dataset_name in ['synthetic', 'hiv'] else False
+    if config['model']['architecture'].lower() == 'spectrumnet':
+        return SpectrumNet(config['model']['number_of_eigenvalues'], config['model']['hidden_channels'], config['data']['num_classes'], config['model']['dropout'])
+    elif config['model']['architecture'].lower() == 'gcn':
+        use_positional_encoding = True if dataset_name == 'synthetic' else False
+        return GCN(config['data']['num_features'], config['model']['hidden_channels'], config['data']['num_classes'], config['model']['dropout'], pooling=graph_classification_task, use_positional_encoding=use_positional_encoding)
+
+
 def make_noise_grid(config):
     P_min = list(map(float, config['noise']['P_min']))
     P_max = list(map(float, config['noise']['P_max']))
@@ -38,5 +50,5 @@ def inclusive_arange(x_min, x_max, step):
 
 def make_radius_grid(config):
     R_max = map(int, config['radius']['R_max'])
-    ranges = [np.arange(1, r_max+1) for r_max in R_max]
+    ranges = [np.arange(0, r_max+1) for r_max in R_max]
     return [np.array(i) for i in product(*ranges)]

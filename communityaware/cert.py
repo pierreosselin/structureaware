@@ -7,7 +7,7 @@ import numpy as np
 from scipy.stats import binom
 
 
-def compute_certificate_gmpy(R: np.ndarray, P: np.ndarray, p_A: float, precision: int=100):
+def compute_certificate_gmpy(R: np.ndarray, P: np.ndarray, p_A: float, precision: int=100) -> gmpy2.mpfr:
     # check inputs are valid
     if np.sum(R) == 0:
         raise ValueError('R should not be identically zero.')

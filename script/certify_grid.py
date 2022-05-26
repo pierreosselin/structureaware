@@ -15,7 +15,7 @@ from communityaware.utils import (load_dataset, make_noise_grid,
 
 # parse arguments
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', type=str, default='cora_ml')
+parser.add_argument('--config', type=str, default='synthetic')
 args = parser.parse_args()
 
 # load parameters
@@ -42,7 +42,7 @@ for noise in tqdm(noise_values, desc='Loop over values of noise.'):
     p_A = proportion_confint(votes.max(1), votes.sum(1), alpha=2 * confidence_level, method='beta')[0]
     abstain = np.array([binom_test(na, total, 0.5) for na, total in zip(votes.max(1), votes.sum(1))]) >= confidence_level # abstain_i is True if smoothed classifier abstains
 
-    certificate_grid = np.zeros((len(votes), *config['radius']['R_max'])) # (i, r_1, r_2,...) entry says if sample i is robust at radius r_1, r_2,...
+    certificate_grid = np.zeros((len(votes), *(np.array(config['radius']['R_max'])+1))) # (i, r_1, r_2,...) entry says if sample i is robust at radius r_1, r_2,...
     correctly_classified = np.zeros((len(votes),)) # ith entry says if smoothed classifier predicts ith sample correctly.
     for sample_idx in trange(len(votes), leave=False, desc='Loop over test set.'):
 
@@ -60,9 +60,12 @@ for noise in tqdm(noise_values, desc='Loop over values of noise.'):
         for R in radius:
             idx = (sample_idx, *R)
             if np.sum(R) == 0:
-                certificate_grid[idx] = 1.0 # has already been certifed correct and we know we didnt abstain.
+                certificate_grid[idx] = 1.0 if correctly_classified[sample_idx] else 0.0 # has already been certifed correct and we know we didnt abstain.
             else:
-                certificate_grid[idx] = float(compute_certificate(R=R, P=noise, p_A=p_A[sample_idx]))
+                try:
+                    certificate_grid[idx] = float(compute_certificate(R=R, P=noise, p_A=p_A[sample_idx]))
+                except:
+                    pass
 
     certificates[noise] = {'certificate_grid': certificate_grid,
                            'correctly_classified': correctly_classified,

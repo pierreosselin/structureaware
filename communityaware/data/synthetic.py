@@ -10,7 +10,7 @@ from torch_geometric.utils import (from_networkx, to_networkx,
                                    to_scipy_sparse_matrix)
 from tqdm import tqdm
 
-from .utils import assign_graph_ids, split_data
+from .utils import assign_graph_ids, positional_encoding, split_data
 
 
 class Synthetic(InMemoryDataset):
@@ -35,9 +35,10 @@ class Synthetic(InMemoryDataset):
         self.number_of_communities = number_of_communities
         self.split_proportions = split_proportions
         self.number_of_nodes = size_of_community * number_of_communities
+        self.fname = f'{graphs_per_class}_{size_of_community}_{number_of_communities}_{split_proportions[0]}_{split_proportions[1]}_{split_proportions[2]}'
         super().__init__(root, transform, pre_transform, pre_filter)
         self.data, self.slices, self.split = torch.load(self.processed_paths[0])
-        
+
     def download(self):
 
         # generate graphs
@@ -54,10 +55,10 @@ class Synthetic(InMemoryDataset):
     @property
     def raw_dir(self):
         return join(self.root, 'synthetic', 'raw')
-    
+
     @property
     def raw_file_names(self):
-        return ['graphs.pt', ]
+        return [f'{self.fname}.pt', ]
 
     @property
     def processed_dir(self):
@@ -65,7 +66,7 @@ class Synthetic(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return ['data.pt',]
+        return [f'{self.fname}.pt',]
 
     def process(self):
         data_list = torch.load(self.raw_paths[0])
@@ -84,7 +85,7 @@ class Synthetic(InMemoryDataset):
 
     def dataloader(self, split, batch_size=32):
         return DataLoader([self[i] for i in self.split[split]], batch_size=batch_size)
-    
+
     def make_noise_matrix(self, graph, p_inner, p_outer=None):
         """_summary_
 
@@ -96,14 +97,14 @@ class Synthetic(InMemoryDataset):
         Returns:
             _type_: _description_
         """
-        if graph.y.item() == 0: 
+        if graph.y.item() == 0:
             noise = p_inner * np.ones((graph.num_nodes, graph.num_nodes))
         else:
             community_size = int(graph.num_nodes / graph.number_of_communities)
             noise = p_outer * np.ones((graph.num_nodes, graph.num_nodes))
             for i in range(graph.number_of_communities):
                 noise[i * community_size: (i+1) * community_size, i * community_size: (i+1) * community_size] = p_inner
-        return noise 
+        return noise
 
     @property
     def testset_labels(self):
@@ -113,7 +114,7 @@ class Synthetic(InMemoryDataset):
 def ER(number_of_nodes):
     graph = from_networkx(connected_critical_er_graph(number_of_nodes))
     graph.y = torch.LongTensor((0,))
-    assign_synthetic_features(graph)
+    graph.positional_encoding = positional_encoding(graph.edge_index)
     graph.number_of_communities = 1
     return graph
 
@@ -128,25 +129,25 @@ def SBM(number_of_nodes, number_of_communities):
     graph = from_networkx(connected_critical_sbm_graph(number_of_nodes, number_of_communities))
     del graph.block
     graph.y = torch.LongTensor((1,))
-    assign_synthetic_features(graph)
+    graph.positional_encoding = positional_encoding(graph.edge_index)
     graph.number_of_communities = number_of_communities
     return graph
 
-def connected_critical_sbm_graph(n, k, p_in_over_p_out = 10.0):
+def connected_critical_sbm_graph(n, k, p_in_over_p_out = 20.0):
     """Graph with n nodes and k communities. n must be divisible by k. p_in_over_p_out is the ratio of p_in (within communities) and p_out (between communities)."""
     if n % k != 0:
-        raise ValueError("n must be divisible by k.")
+        raise ValueError('n must be divisible by k.')
 
     # Calculate critical values of p_in, p_out which respect the p_in_over_p_out parameter.
-    b = k / (p_in_over_p_out + k - 1) 
+    b = k / (p_in_over_p_out + k - 1)
     a = k - (k-1) * b
     p_in = a * np.log(n)/n
     p_out = b * np.log(n)/n
 
     # sanity checks
     assert np.isclose(p_in, p_out * p_in_over_p_out)
-    assert 0 <= p_in <= 1 
-    assert 0 <= p_out <= 1 
+    assert 0 <= p_in <= 1
+    assert 0 <= p_out <= 1
     assert np.isclose(a + (k-1)*b, k)
 
     # construct graph
@@ -157,16 +158,3 @@ def connected_critical_sbm_graph(n, k, p_in_over_p_out = 10.0):
     while not nx.is_connected(g):
         g = nx.stochastic_block_model(sizes, p)
     return g
-
-def assign_synthetic_features(graph, feature='PE'):
-    if feature=='ones':
-        graph.x = torch.ones(graph.num_nodes, 1)
-    elif feature=='katz':
-        graph_nx = to_networkx(graph)
-        graph.x = torch.FloatTensor([nx.katz_centrality_numpy(graph_nx)[i] for i in range(graph_nx.number_of_nodes())]).unsqueeze(1)
-    elif feature=='PE':
-        _, vecs = sp.linalg.eigsh(to_scipy_sparse_matrix(graph.edge_index, num_nodes=graph.num_nodes))
-        graph.x = torch.FloatTensor(vecs)
-    else:
-        raise ValueError('feature should be one of: "ones", "katz" or "PE".')
-    assert graph.num_nodes == graph.x.shape[0]

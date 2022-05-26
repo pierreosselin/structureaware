@@ -1,16 +1,22 @@
 data:
   name: synthetic
+  num_classes: 2
+  num_features: 6
+  graph_classification: True
   graphs_per_class: 2000
   size_of_community: 20
   number_of_communities: 3
   split_proportions: [0.8, 0.175, 0.025]
 
 model:
-  hidden_channels: [16, 16]
+  architecture: spectrumnet
+  number_of_eigenvalues: 6
+  hidden_channels: 64
+  dropout: 0.5
 
 training:
   lr: 0.001
-  max_epochs: 3000
+  max_epochs: 100
   batch_size: 32
   weight_decay: 0.001
 
@@ -19,9 +25,9 @@ voting:
   batch_size: 50
 
 noise:
-  P_min: [0.01, 0.01]
-  P_max: [0.1, 0.1]
-  P_step: [0.02, 0.02]
+  P_min: [0.05, 0.01]
+  P_max: [0.05, 0.01]
+  P_step: [0, 0]
 
 radius:
   R_max: [7, 7]

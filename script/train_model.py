@@ -1,7 +1,7 @@
 import argparse
 import os
 from os.path import join
-from typing import Callable, Optional
+from typing import Callable
 
 import numpy as np
 import torch
@@ -15,7 +15,7 @@ from torch_geometric.utils import to_dense_batch
 
 from communityaware.models import GCN
 from communityaware.perturb import perturb_graph
-from communityaware.utils import load_dataset
+from communityaware.utils import load_dataset, load_model
 
 
 # helper functions for graph classification
@@ -27,11 +27,11 @@ def train_epoch_graph_classification(model: nn.Module, dataset: InMemoryDataset,
     accuracy = torchmetrics.Accuracy()
     epoch_loss = torchmetrics.MeanMetric()
     for batch in train_loader:  # Iterate in batches over the training dataset.
-        out = model(batch.x, batch.edge_index, batch.batch)  # Perform a single forward pass.
+        out = model(batch)  # Perform a single forward pass.
         loss = criterion(out, batch.y)  # Compute the loss.
         loss.mean().backward()  # Derive gradients.
         epoch_loss.update(loss.cpu())
-        accuracy.update(out.cpu(), batch.y.cpu())
+        accuracy.update(out.squeeze().cpu(), batch.y.cpu())
         optimiser.step()  # Update parameters based on gradients.
         optimiser.zero_grad()  # Clear gradients.
     return epoch_loss.compute().item(), accuracy.compute().item()
@@ -43,10 +43,10 @@ def evaluate_graph_classification(model: nn.Module, dataset: InMemoryDataset, cr
         accuracy = torchmetrics.Accuracy()
         epoch_loss = torchmetrics.MeanMetric()
         for batch in loader:  # Iterate in batches over the training/test dataset.
-            out = model(batch.x, batch.edge_index, batch.batch)
+            out = model(batch)
             loss = criterion(out, batch.y)
             epoch_loss.update(loss.cpu())
-            accuracy.update(out.cpu(), batch.y.cpu())
+            accuracy.update(out.cpu().squeeze(), batch.y.cpu())
         return epoch_loss.compute().item(), accuracy.compute().item()
 
 # helper functions for node classification
@@ -54,16 +54,16 @@ def train_epoch_node_classification(model: nn.Module, dataset: InMemoryDataset, 
     model.train()
     train_mask = dataset.data.train_mask
     if smoothing is None:
-        out = model(dataset.data.x, dataset.data.edge_index)[train_mask]
+        out = model(dataset.data)[train_mask]
     else:
         # TODO: fix this horribleness and hardcoded stuff...
         batch = list(perturb_graph(dataset.data, dataset.make_noise_matrix(0.01, 0.06).to(device), repeats=smoothing, batch_size=smoothing))[0].to(device)
-        out = model(batch.x, batch.edge_index, batch.batch)
+        out = model(batch)
         out = to_dense_batch(out, batch.batch)[0]
         out = out.mean(axis=0)[train_mask]
     loss = criterion(out, dataset.data.y[train_mask]).mean()  # Compute the loss.
     loss.backward()  # Derive gradients.
-    accuracy = torchmetrics.Accuracy()(out.cpu(), dataset.data.y[train_mask].cpu())
+    accuracy = torchmetrics.Accuracy()(out.cpu().squeeze(), dataset.data.y[train_mask].cpu())
     optimiser.step()  # Update parameters based on gradients.
     optimiser.zero_grad()  # Clear gradients.
     return loss.item(), accuracy.item()
@@ -72,16 +72,16 @@ def evaluate_node_classification(model: nn.Module, dataset: InMemoryDataset, cri
     with torch.no_grad():
         model.eval()
         mask = dataset.data.test_mask if split=='test' else dataset.data.val_mask
-        out = model(dataset.data.x, dataset.data.edge_index)[mask]
+        out = model(dataset.data)[mask]
         loss = criterion(out, dataset.data.y[mask]).mean()
-        accuracy = torchmetrics.Accuracy()(out.cpu(), dataset.data.y[mask].cpu())
+        accuracy = torchmetrics.Accuracy()(out.cpu().squeeze(), dataset.data.y[mask].cpu())
         return loss.item(), accuracy.item()
 
 if __name__ == '__main__':
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='cora_ml')
-    parser.add_argument('--device', type=str, default='cuda:3')
+    parser.add_argument('--config', type=str, default='synthetic')
+    parser.add_argument('--device', type=str, default='cpu')
     args = parser.parse_args()
     config = yaml.safe_load(open(f'config/{args.config}.yaml'))
     device = args.device
@@ -89,19 +89,24 @@ if __name__ == '__main__':
     # load data
     dataset = load_dataset(config)
     dataset.data.to(device)
+    dataset_name = config['data']['name'].lower()
 
     # determine if the dataset is graph or node classification
-    graph_classification_task = True if config['data']['name'].lower() in ['synthetic', 'hiv'] else False
+    graph_classification_task = True if dataset_name in ['synthetic', 'hiv'] else False
+
+    # determine if we should use positional_encoding
+    use_positional_encoding = True if dataset_name == 'synthetic' else False
 
     # Instanciate model, optimiser and loss
-    model = GCN(num_features=dataset.num_features,
-        hidden_channels=config['model']['hidden_channels'],
-        num_classes=dataset.num_classes,
-        pooling =graph_classification_task
-    ).to(device)
+    model = load_model(config).to(device)
 
-    optimiser = torch.optim.Adam(model.parameters(), lr=config['training']['lr'], weight_decay=config['training']['weight_decay'])
-    criterion = torch.nn.CrossEntropyLoss(reduction='none')
+    optimiser = torch.optim.AdamW(model.parameters(), lr=config['training']['lr'], weight_decay=config['training']['weight_decay'])
+    if dataset.num_classes == 2:
+        _criterion = torch.nn.BCEWithLogitsLoss(reduction='none')
+        criterion = lambda x, y: _criterion(x.squeeze(), y.float())
+    else:
+        criterion = torch.nn.CrossEntropyLoss(reduction='none')
+
 
     # early stopping
     best_model = None
