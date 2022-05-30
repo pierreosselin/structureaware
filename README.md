@@ -30,3 +30,4 @@ Theory
 - [x] What happens if the radius is 0? PREDICT instead of CERTIFY?
 - [ ] Can we prove monoticity? Proof could be to show certificate (r_1, r_2, ...,r_n) holds then so does (r_1 - 1, r_2, ...,r_n).
 - [x] Subregions - Comes from the Lee paper.
+- [ ] Think about when p_i = 0? Is it still valid? Does every edge have to be assigned a community? I think not, its like the features we can just ignore them?
