@@ -14,39 +14,7 @@ from communityaware.perturb import perturb_graph
 from communityaware.utils import load_dataset, load_model, make_noise_grid
 
 
-def votes_node_classification(model, alpha_pair, dataset, repeats=10000, batch_size=50, device='cpu'):
-
-    # check input
-    if repeats % batch_size != 0:
-        raise ValueError(f'Batch size should divide repeats. {batch_size=} {repeats=}')
-
-    with torch.no_grad():
-        votes = torch.zeros((len(dataset.testset_labels), dataset.num_classes), dtype=torch.long).to(device)
-        pbar = tqdm(total=repeats)
-        for _ in range(repeats // batch_size):
-            # repeat and perturb the graph batch_size times
-            pbar.set_description(f'Perturbing graph.')
-            noise = dataset.make_noise_matrix(*alpha_pair)
-            perturbed_graphs = perturb_graph(dataset.data, noise, repeats=batch_size, batch_size=batch_size, device=device)
-            batch = list(perturbed_graphs)[0].to(device)
-
-            # predict the labels of the perturbed graphs
-            pbar.set_description(f'Predicting labels.')
-            output = model(batch.x, batch.edge_index, batch.batch)
-            output, _ = to_dense_batch(output, batch.batch) # output is a tensor of shape (batch_size, num_nodes, num_classes)
-            output = output[:, dataset.data.test_mask, :] # output is a tensor of shape (batch_size, num_test_nodes, num_classes)
-            output = output.argmax(dim=2).long() # output is a tensor of shape (batch_size, num_test_nodes) (value at i,j is the predicted class of node j in batch i)
-
-            # thse next three lines make a tensor output of size (num_test_nodes, num_classes) where the value at i,j is the number of votes for class j for node i.
-            target = torch.zeros((dataset.num_classes, output.size(1)), dtype=torch.long).to(device)
-            src = torch.ones_like(output, dtype=torch.long).to(device)
-            output = target.scatter_add_(0, output, src).T
-
-            votes += output
-            pbar.update(batch_size)
-        return votes.cpu()
-
-def votes_graph_classification(model, alpha_pair, dataset, repeats=10000, batch_size=32, device='cpu'):
+def compute_votes(model, alpha_pair, dataset, repeats=10000, batch_size=32, device='cpu'):
     with torch.no_grad():
         votes = torch.zeros((len(dataset.testset_labels), dataset.num_classes), dtype=torch.long).to(device)
         test_loader = dataset.dataloader('test', batch_size=1)
@@ -59,10 +27,10 @@ def votes_graph_classification(model, alpha_pair, dataset, repeats=10000, batch_
             for batch in perturbed_graphs:
                 batch = batch.to(device)
                 if dataset.num_classes > 2:
-                    predictions = model(batch).argmax(axis=1)
+                    predictions = model(batch.x, batch.edge_index, batch.batch).argmax(axis=1)
                     votes[i] += torch.bincount(predictions, minlength=dataset.num_classes)
                 else:
-                    predictions = model(batch) > 0
+                    predictions = model(batch.x, batch.edge_index, batch.batch) > 0
                     votes[i] += torch.bincount(predictions.long().squeeze(), minlength=2)
     return votes.cpu()
 
@@ -98,10 +66,7 @@ if __name__ == '__main__':
     model.eval()
 
     for noise in tqdm(noise_values, desc='Loop over values of noise.'):
-        if graph_classification_task:
-            votes = votes_graph_classification(model, noise, dataset, config['voting']['repeats'], config['voting']['batch_size'], device)
-        else:
-            votes = votes_node_classification(model, noise, dataset, config['voting']['repeats'], config['voting']['batch_size'], device)
+        votes = compute_votes(model, noise, dataset, config['voting']['repeats'], config['voting']['batch_size'], device)
         assert votes.sum(1).unique().item() == config['voting']['repeats'] # this also implicitly checks unique is size 1.
         os.makedirs(votes_path, exist_ok=True)
         torch.save(votes, join(votes_path, '_'.join(map(str, np.round(noise, 8))))) # round(, 8) is to get rid of floating point errors. E.g. 0.30000000000000004 -> 0.3
