@@ -1,7 +1,6 @@
 import argparse
 import os
 from os.path import join
-from typing import Callable
 
 import numpy as np
 import torch
@@ -11,10 +10,7 @@ import yaml
 from torch.nn.modules.loss import _Loss
 from torch.optim.optimizer import Optimizer
 from torch_geometric.data import InMemoryDataset
-from torch_geometric.utils import to_dense_batch
 
-from communityaware.models import GCN
-from communityaware.perturb import perturb_graph
 from communityaware.utils import load_dataset, load_model
 
 

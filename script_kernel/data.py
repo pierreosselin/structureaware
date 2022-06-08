@@ -35,7 +35,8 @@ if __name__ == '__main__':
         labels.append(1)
     labels = np.array(labels)
     dataset = list(grakel.graph_from_networkx(dataset, node_labels_tag='node_label', edge_labels_tag='edge_label'))
-    G_train, G_test, y_train, y_test = train_test_split(dataset, labels, train_size=50, random_state=42)
+    G_train, G_test, y_train, y_test = train_test_split(dataset, labels, train_size=50, random_state=42, stratify=labels)
+    assert np.sum(y_test)==5
 
     os.makedirs('data/kernel', exist_ok=True)
     output = {
