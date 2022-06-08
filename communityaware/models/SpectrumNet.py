@@ -19,16 +19,10 @@ class SpectrumNet(torch.nn.Module):
         self.output_dim = num_classes if num_classes > 2 else 1
         self.mlp = MLP(num_features, hidden_channels, self.output_dim, dropout=dropout)
 
-    def forward(self, batch):
-        edge_index, edge_weight = get_laplacian(batch.edge_index, normalization='sym')
-        eigenvalues = torch.linalg.eigvalsh(to_dense_adj(edge_index, batch.batch, edge_weight))
-        x = eigenvalues[:, :6]
+    def forward(self, x, edge_index, batch, k=6):
+        with torch.no_grad():
+            edge_index, edge_weight = get_laplacian(edge_index, normalization='sym')
+            eigenvalues = torch.linalg.eigvalsh(to_dense_adj(edge_index, batch, edge_weight))
+            x = eigenvalues[:, :k]
         x = self.mlp(x)
         return x
-
-@lru_cache(maxsize=None)
-@torch.no_grad()
-def spectrum(edge_index, k=6):
-    edge_index, edge_weight = get_laplacian(edge_index, normalization='sym')
-    eigvals = sp.linalg.eigsh(to_scipy_sparse_matrix(edge_index, edge_weight), k=k, which='SM')[0]
-    return torch.tensor(eigvals)

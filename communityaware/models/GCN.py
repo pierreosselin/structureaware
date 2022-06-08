@@ -2,11 +2,11 @@ import scipy.sparse as sp
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from sklearn.cluster import k_means
 from torch_geometric.nn import GCNConv, global_add_pool
 from torch_geometric.utils import get_laplacian, to_scipy_sparse_matrix
 
 from ..data.utils import positional_encoding
+from .utils import unbatch
 
 
 class GCN(torch.nn.Module):
@@ -42,14 +42,10 @@ class GCN(torch.nn.Module):
         self.linear = nn.Linear(dimensions[-2], dimensions[-1])
         self.dropout = dropout
 
-    def forward(self, input_batch):
+    def forward(self, x, edge_index, batch):
         # extract information from batch
-        x, edge_index, batch = input_batch.x, input_batch.edge_index, input_batch.batch
-        if self.use_positional_encoding:
-            if input_batch.positional_encoding is None:
-                x = torch.vstack([positional_encoding(graph.edge_index) for graph in input_batch.to_data_list()]).to(edge_index.device)
-            else:
-                x = input_batch.positional_encoding
+        if self.use_positional_encoding and x is None:
+            x = torch.vstack([positional_encoding(graph_edge_index) for graph_edge_index in unbatch(edge_index, batch)]).to(edge_index.device)
 
         # 1. Obtain node embeddings
         for conv in self.convs:
