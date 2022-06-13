@@ -41,9 +41,9 @@ def anisotropic(R: np.ndarray, P: np.ndarray, p_A: float, precision: int=100) ->
             lower_bound += (p_A-p) * sol[final_region][0]
 
     # sanity check on output
-    #assert 0 <= lower_bound <= 1.0 or np.isclose(lower_bound, 0) or np.isclose(lower_bound, 1.0)
-    #if not (0 <= lower_bound <= 1.0):
-    #    raise ValueError('lower_bound should be in [0, 1]')
+    assert 0 <= lower_bound <= 1.0 or np.isclose(lower_bound, 0) or np.isclose(lower_bound, 1.0)
+    if not (0 <= lower_bound <= 1.0):
+        raise ValueError('lower_bound should be in [0, 1]')
     return lower_bound
 
 @lru_cache(maxsize=None)

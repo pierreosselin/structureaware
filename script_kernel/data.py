@@ -28,21 +28,24 @@ if __name__ == '__main__':
     # generate the dataset
     dataset = []
     labels = []
-    for _ in range(30):
+    for _ in range(305):
         dataset.append(make_er_motif(7, motif1))
         dataset.append(make_er_motif(7, motif2))
         labels.append(0)
         labels.append(1)
     labels = np.array(labels)
     dataset = list(grakel.graph_from_networkx(dataset, node_labels_tag='node_label', edge_labels_tag='edge_label'))
-    G_train, G_test, y_train, y_test = train_test_split(dataset, labels, train_size=50, random_state=42, stratify=labels)
+    G_train, G_valid_test, y_train, y_valid_test = train_test_split(dataset, labels, train_size=50, random_state=42, stratify=labels)
+    G_test, G_valid, y_test, y_valid = train_test_split(G_valid_test, y_valid_test, train_size=10, random_state=42, stratify=y_valid_test) # train size here is actually test size.
     assert np.sum(y_test)==5
 
     os.makedirs('data/kernel', exist_ok=True)
     output = {
         'G_train': G_train,
+        'G_valid': G_valid,
         'G_test': G_test,
         'y_train': y_train,
+        'y_valid': y_valid,
         'y_test': y_test
     }
     pickle.dump(output, open('data/kernel/data.pkl', 'wb'))
