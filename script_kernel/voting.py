@@ -37,8 +37,7 @@ elif args.kernel == 'nspd':
 if args.p2 is None: # isotropic noise
     noise_matrix = np.ones((10, 10)) * args.p1
 else:
-    noise_matrix = np.zeros((10, 10))
-    noise_matrix[3:, 3:] = args.p2
+    noise_matrix = np.ones((10, 10)) * args.p2
     noise_matrix[:5, :5] = args.p1
 
 
