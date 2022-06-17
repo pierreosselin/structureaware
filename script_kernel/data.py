@@ -8,25 +8,36 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--motif_n', type=int, default=15)
-parser.add_argument('--random_n', type=int, default=17)
+parser.add_argument('--motif_n', type=int, default=10)
+parser.add_argument('--random_n', type=int, default=10)
 parser.add_argument('--train_n', type=int, default=1000)
-parser.add_argument('--valid_n', type=int, default=1000)
+parser.add_argument('--valid_n', type=int, default=500)
 parser.add_argument('--test_n', type=int, default=10)
 args = parser.parse_args()
 
 
 def make_er_motif(n, motif):
     while True:
-        g = nx.erdos_renyi_graph(n, np.log(n)/n)
-        connected = nx.is_connected(g)
-        if connected and g.has_edge(0, 1):
+        #target_degree = (2 + len(motif)-1) / 2
+        graph = nx.erdos_renyi_graph(n, 0.5)
+        connected = nx.is_connected(graph)
+        if connected:
             break
-    g = nx.relabel_nodes(g, {i: i+len(motif)-2 for i in range(n)})
-    g.add_edges_from(motif.edges())
-    nx.set_node_attributes(g, {i: 1 for i in g.nodes()}, 'node_label')
-    nx.set_edge_attributes(g, {i: 1 for i in g.edges()}, 'edge_label')
-    return g
+
+    graph = nx.relabel_nodes(graph, {i: i+motif.number_of_nodes() for i in range(n)})
+    graph.add_edges_from(motif.edges())
+    graph.add_edge(motif.number_of_nodes()-1, motif.number_of_nodes())
+    graph = add_attributes(graph)
+    return graph
+
+def add_attributes(graph, use_degree=True):
+    if use_degree:
+        nx.set_node_attributes(graph, {i: graph.degree(i) for i in graph.nodes()}, 'node_label')
+    else:
+        nx.set_node_attributes(graph, {i: 1 for i in graph.nodes()}, 'node_label')
+    nx.set_edge_attributes(graph, {i: 1 for i in graph.edges()}, 'edge_label')
+    return graph
+
 
 if __name__ == '__main__':
 
@@ -38,11 +49,13 @@ if __name__ == '__main__':
     dataset = []
     labels = []
     total_n = args.train_n + args.valid_n + args.test_n
-    for _ in range(int(total_n/2)):
+
+    for _ in range(int(total_n // 2)):
         dataset.append(make_er_motif(args.random_n, motif1))
-        dataset.append(make_er_motif(args.random_n, motif2))
         labels.append(0)
+        dataset.append(make_er_motif(args.random_n, motif2))
         labels.append(1)
+
     labels = np.array(labels)
     dataset = list(grakel.graph_from_networkx(dataset, node_labels_tag='node_label', edge_labels_tag='edge_label'))
     G_train, G_valid_test, y_train, y_valid_test = train_test_split(dataset, labels, train_size=args.train_n, stratify=labels)
@@ -52,7 +65,6 @@ if __name__ == '__main__':
     assert len(G_valid) == args.valid_n
     assert len(G_test) == args.test_n
     assert np.sum(y_test)==int(args.test_n/2)
-
 
     os.makedirs('data/kernel', exist_ok=True)
     output = {
