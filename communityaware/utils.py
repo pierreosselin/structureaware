@@ -4,7 +4,7 @@ from itertools import product
 import numpy as np
 import scipy.sparse as sp
 
-from communityaware.data import HIV, CoraML, Synthetic
+from communityaware.data import HIV, Synthetic
 from communityaware.models import GCN, SpectrumNet
 
 
@@ -19,8 +19,6 @@ def load_dataset(config):
         dataset = Synthetic('data', config['graphs_per_class'], config['size_of_community'], config['number_of_communities'], config['split_proportions'])
     elif config['name'] == 'hiv':
         dataset = HIV('data', config['min_required_edge_flips'], config['split_proportions'])
-    elif config['name'] == 'cora_ml':
-        dataset = CoraML('data', config['training_nodes_per_class'])
     else:
         raise ValueError('Dataset {} not supported'.format(dataset))
     return dataset
