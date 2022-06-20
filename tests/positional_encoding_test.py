@@ -10,14 +10,14 @@ from torch_geometric.utils import get_laplacian, to_dense_adj
 
 from communityaware.models.positional_encoding import position_encoding_batch
 
-device = 'cuda:0'
+device = 'cpu'
 
-def position_encoding_batch_test():
-    _position_encoding_batch_test('MUTAG')
-    _position_encoding_batch_test('ENZYMES')
-    _position_encoding_batch_test('PROTEINS')
+def test_position_encoding_batch():
+    _test_position_encoding_batch('MUTAG')
+    _test_position_encoding_batch('ENZYMES')
+    _test_position_encoding_batch('PROTEINS')
 
-def _position_encoding_batch_test(dataset_name):
+def _test_position_encoding_batch(dataset_name):
     print('Testing', dataset_name)
     dataset = TUDataset(root=f'data/{dataset_name}', name=dataset_name, pre_filter = lambda x: x.num_nodes > 6)
 
@@ -76,5 +76,3 @@ def _position_encoding_batch_test(dataset_name):
 
     print('Test passed.')
     print(f'Batch time = {np.mean(batch_time):.4f}. Non-batch time = {np.mean(single_time):.4f}. Speedup = {np.mean(single_time)/np.mean(batch_time):.4f}x')
-
-position_encoding_batch_test()
