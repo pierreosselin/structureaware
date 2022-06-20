@@ -4,8 +4,10 @@ from typing import Optional, Union
 import numpy as np
 import scipy.sparse as sp
 import torch
+import torch_geometric
 from sklearn.model_selection import train_test_split
 from torch import LongTensor
+from torch_geometric.data import Data, HeteroData
 from torch_geometric.utils import get_laplacian, to_scipy_sparse_matrix
 
 
@@ -31,6 +33,17 @@ def split_data(y: LongTensor, train_size: float, test_size: Union[float, int]) -
 def assign_graph_ids(data_list):
     for i, graph in enumerate(data_list):
         graph.idx = i
+
+class AssignID(torch_geometric.transforms.BaseTransform):
+
+    def __init__(self):
+        super().__init__()
+        self.counter = 0
+
+    def __call__(self, data: Union[Data, HeteroData]):
+        data.idx = torch.tensor(self.counter)
+        self.counter += 1
+        return data
 
 @lru_cache(maxsize=None)
 def positional_encoding(edge_index, k=6):
