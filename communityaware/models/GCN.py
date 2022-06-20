@@ -3,10 +3,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, global_add_pool
-from torch_geometric.utils import get_laplacian, to_scipy_sparse_matrix
+from torch_geometric.utils import get_laplacian
 
-from ..data.utils import positional_encoding
-from .utils import unbatch
+from .positional_encoding import position_encoding_batch
 
 
 class GCN(torch.nn.Module):
@@ -20,7 +19,7 @@ class GCN(torch.nn.Module):
         pooling: If True, use global pooling to readout the graph.
     """
 
-    def __init__(self, num_features, hidden_channels, num_classes = 2, dropout=0.5, pooling=False, use_positional_encoding=False):
+    def __init__(self, num_features=None, hidden_channels=None, num_classes=2, dropout=0.5, pooling=False, use_positional_encoding=False):
         super(GCN, self).__init__()
         self.num_features = num_features
         self.hidden_channels = hidden_channels
@@ -28,12 +27,14 @@ class GCN(torch.nn.Module):
         self.dropout = dropout
         self.pooling = pooling
         self.use_positional_encoding = use_positional_encoding
+        if self.use_positional_encoding:
+            self.num_features = 6
 
         if isinstance(hidden_channels, int):
             hidden_channels = [hidden_channels,]
 
         final_dim = num_classes if num_classes > 2 else 1
-        dimensions = [num_features, *hidden_channels, final_dim]
+        dimensions = [self.num_features, *hidden_channels, final_dim]
 
         self.convs = []
         for f_in, f_out in zip(dimensions[:-2], dimensions[1:-1]):
@@ -45,7 +46,9 @@ class GCN(torch.nn.Module):
     def forward(self, x, edge_index, batch):
         # extract information from batch
         if self.use_positional_encoding and x is None:
-            x = torch.vstack([positional_encoding(graph_edge_index) for graph_edge_index in unbatch(edge_index, batch)]).to(edge_index.device)
+            x = position_encoding_batch(edge_index, batch)
+        elif self.use_positional_encoding:
+            raise NotImplementedError('Positional encoding is not implemented for graphs with existing features.')
 
         # 1. Obtain node embeddings
         for conv in self.convs:
