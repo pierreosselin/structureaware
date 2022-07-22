@@ -1,0 +1,20 @@
+data:
+  source: tudataset
+  name: NCI1
+  train_split: 0.8
+  test_split: 100
+
+model:
+  architecture: 'gcn'
+  hidden_channels: [32, 32]
+  dropout: 0.5
+  drop_original_features: False
+  use_positional_encoding: False
+  use_degree_encoding: False
+
+training:
+  lr: 0.01
+  decay: True
+  max_epochs: 350
+  batch_size: 64
+  weight_decay: 0.

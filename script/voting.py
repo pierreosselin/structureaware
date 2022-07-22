@@ -14,6 +14,13 @@ from communityaware.perturb import perturb_graph
 from communityaware.utils import load_dataset, load_model, make_noise_grid
 
 
+def sparsity_aware_noise_function(graph, p0, p1):
+    noise = torch.ones((graph.num_nodes, graph.num_nodes)) * p1
+    for i, j in graph.edge_index.T:
+        noise[i.item(),j.item()] = p0
+    noise.fill_diagonal_(0)
+    return noise
+
 def compute_votes(model, alpha_pair, dataset, repeats=10000, batch_size=32, device='cpu'):
     with torch.no_grad():
         votes = torch.zeros((len(dataset.testset_labels), dataset.num_classes), dtype=torch.long).to(device)
@@ -21,7 +28,8 @@ def compute_votes(model, alpha_pair, dataset, repeats=10000, batch_size=32, devi
         pbar = tqdm(enumerate(test_loader), leave=False, total=len(test_loader))
         for i, graph in pbar:
             pbar.set_description(f'Perturbing graph.')
-            noise = torch.tensor(dataset.make_noise_matrix(graph, *alpha_pair))
+            #noise = torch.tensor(dataset.make_noise_matrix(graph, *alpha_pair))
+            noise = sparsity_aware_noise_function(graph, *alpha_pair)
             perturbed_graphs = perturb_graph(graph, noise, repeats=repeats, batch_size=batch_size, device=device)
             pbar.set_description(f'Predicting labels.')
             for batch in perturbed_graphs:
@@ -60,7 +68,7 @@ if __name__ == '__main__':
     use_positional_encoding = True if dataset_name == 'synthetic' else False
 
     # Load config parameters
-    model = load_model(config).to(device)
+    model = load_model(config, dataset.num_features, dataset.num_classes).to(device)
     model = model.to(device)
     model.load_state_dict(torch.load(join(model_path, 'weights.pt')))
     model.eval()

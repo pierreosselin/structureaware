@@ -29,7 +29,7 @@ def position_encoding_batch(edge_index: Tensor, batch: Optional[Tensor] = None, 
     smallest_n = torch.bincount(batch).min().item()
     if smallest_n < k:
         raise ValueError(f'Graph sizes are too small for the given k: smallest graph is {smallest_n} but {k=}')
-    edge_index, edge_weight = get_laplacian(edge_index, normalization='sym')
+    edge_index, edge_weight = get_laplacian(edge_index, normalization='sym', num_nodes=len(batch))
     laplacians = to_dense_adj(edge_index, batch, edge_weight)
     laplacians = add_laplacian_jitter(laplacians)
     eigenvectors, masks = eigenvectors_batch(laplacians)

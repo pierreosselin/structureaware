@@ -9,7 +9,10 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [types-all]
-        exclude: ^testing/resources/
+        exclude: ^script/
+      - id: mypy
+        additional_dependencies: [types-all]
+        exclude: ^script_kernel/
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.2.0
     hooks:

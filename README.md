@@ -24,6 +24,7 @@ Code
 - [x] Certificates in JAX? - No because need arbitary precision.
 - [ ] More sophisticated model adn the load_model util
 - [ ] Tidy code using black and add it as a pre-commit hook
+- [ ] Add num_nodes to get_laplacian for positional encoding
 
 Theory
 - [x] Is there a nicer way to make framework more general and reduce compute? No.

@@ -11,8 +11,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--motif_n', type=int, default=10)
 parser.add_argument('--random_n', type=int, default=10)
 parser.add_argument('--train_n', type=int, default=1000)
-parser.add_argument('--valid_n', type=int, default=500)
-parser.add_argument('--test_n', type=int, default=10)
+parser.add_argument('--valid_n', type=int, default=1000)
+parser.add_argument('--test_n', type=int, default=100)
 args = parser.parse_args()
 
 

@@ -4,7 +4,7 @@ from itertools import product
 import numpy as np
 import scipy.sparse as sp
 
-from communityaware.data import HIV, Synthetic
+from communityaware.data import Synthetic, TUDataset
 from communityaware.models import GCN, SpectrumNet
 
 
@@ -17,20 +17,27 @@ def load_dataset(config):
     config = config['data']
     if config['name'] == 'synthetic':
         dataset = Synthetic('data', config['graphs_per_class'], config['size_of_community'], config['number_of_communities'], config['split_proportions'])
-    elif config['name'] == 'hiv':
-        dataset = HIV('data', config['min_required_edge_flips'], config['split_proportions'])
+    #elif config['name'] == 'hiv':
+    #    dataset = HIV('data', config['min_required_edge_flips'], config['split_proportions'])
+    elif config.get('source') == 'tudataset':
+        cleaned = config.get('cleaned', False)
+        dataset = TUDataset(config['name'], train_split=config['train_split'], test_split=config['test_split'], cleaned=cleaned)
     else:
         raise ValueError('Dataset {} not supported'.format(dataset))
     return dataset
 
-def load_model(config):
-    dataset_name = config['data']['name'].lower()
-    graph_classification_task = True if dataset_name in ['synthetic', 'hiv'] else False
+def load_model(config, num_features, num_classes):
     if config['model']['architecture'].lower() == 'spectrumnet':
         return SpectrumNet(config['model']['number_of_eigenvalues'], config['model']['hidden_channels'], config['data']['num_classes'], config['model']['dropout'])
-    elif config['model']['architecture'].lower() == 'gcn':
-        use_positional_encoding = True if dataset_name == 'synthetic' else False
-        return GCN(config['data']['num_features'], config['model']['hidden_channels'], config['data']['num_classes'], config['model']['dropout'], pooling=graph_classification_task, use_positional_encoding=use_positional_encoding)
+    elif config['model']['architecture'].lower() in ['gcn', 'gin']:
+        drop_original_features = config['model'].get('drop_original_features', False)
+        use_positional_encoding = config['model'].get('use_positional_encoding', False)
+        use_degree_encoding = config['model'].get('use_degree_encoding', False)
+        return GCN(num_features, config['model']['hidden_channels'], num_classes, config['model']['dropout'],
+                    drop_original_features=drop_original_features,
+                    use_positional_encoding=use_positional_encoding,
+                    use_degree_encoding=use_degree_encoding,
+                    conv_type=config['model']['architecture'])
 
 
 def make_noise_grid(config):
