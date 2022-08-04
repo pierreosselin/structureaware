@@ -59,7 +59,11 @@ class GCN(torch.nn.Module):
         self.linear = nn.Linear(dimensions[-2], dimensions[-1])
         self.dropout = dropout
 
-    def forward(self, x, edge_index, batch):
+    def forward(self, x, edge_index, batch=None):
+
+        if batch is None:
+            batch = torch.zeros(x.size(0)).long()
+
         # extract information from batch
         if self.drop_original_features:
             x = None
