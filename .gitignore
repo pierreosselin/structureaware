@@ -150,3 +150,7 @@ figures/torchdrug
 
 # data
 data/
+wandb/
+
+# submodule
+script_CAL/CAL

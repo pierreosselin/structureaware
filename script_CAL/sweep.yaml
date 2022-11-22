@@ -1,0 +1,21 @@
+program: script_CAL/voting_and_certificates.py
+method: grid
+parameters:
+  use_wandb:
+    value: True
+  sweep:
+    value: script_CAL/sweep.yaml
+  device:
+    value: cuda:3
+  dataset:
+    value: PROTEINS
+  model:
+    value: CausalGAT
+  layers:
+    value: 1
+  p_attention_cutoff:
+    values: [0.1, 0.25, 0.5, 0.75, 0.9]
+  p_large_attention:
+    values: [0.1, 0.2, 0.3, 0.4, 0.5]
+  p_small_attention:
+    values: [0.1, 0.2, 0.3, 0.4, 0.5]
