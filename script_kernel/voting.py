@@ -4,6 +4,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import argparse
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pickle
 from os.path import join
 
@@ -17,6 +19,7 @@ from grakel.kernels import (GraphletSampling,
 from sklearn.svm import SVC
 from timebudget import timebudget
 from tqdm import tqdm
+
 
 from communityaware.perturb import _perturb_graph_vmap
 
