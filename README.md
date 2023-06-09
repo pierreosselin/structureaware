@@ -1,5 +1,5 @@
-# Community Aware Randomised smoothing
-Community Aware Randomised smoothing for graph classification.
+# Structure Aware Randomised smoothing
+Structure Aware Randomised smoothing for graph classification.
 
 ## Usage
 
